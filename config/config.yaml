@@ -34,7 +34,7 @@ tilt:
   # Tilt is derived from the spatial gradient of settlement: for each station we
   # take its nearest neighbour within max_neighbor_distance_m and compute
   # tilt = arctan(delta_settlement / horizontal_baseline).
-  max_neighbor_distance_m: 25000
+  max_neighbor_distance_m: 60000   # CA DWR has only ~11 extensometers, spread wide
   fallback_baseline_m: 1000
   sensor_noise_deg: 0.003        # independent per-reading tiltmeter noise
 

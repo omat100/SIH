@@ -59,26 +59,50 @@ def load_ground_displacement(cfg: Config) -> pd.DataFrame:
         )
 
 
+def _read_csv_url(url: str) -> pd.DataFrame:
+    raw = requests.get(url, timeout=120)
+    raw.raise_for_status()
+    return pd.read_csv(io.BytesIO(raw.content), low_memory=False)
+
+
 def _fetch_ca_dwr(ckan_base: str, dataset_id: str) -> pd.DataFrame:
-    url = f"{ckan_base.rstrip('/')}/package_show"
-    resp = requests.get(url, params={"id": dataset_id}, timeout=30)
+    """CA DWR ships this dataset as separate CSVs: a per-station daily
+    displacement timeseries + a station metadata table. Locate both by name and
+    join them into one station/date/lat/lon/displacement frame."""
+    resp = requests.get(f"{ckan_base.rstrip('/')}/package_show",
+                        params={"id": dataset_id}, timeout=30)
     resp.raise_for_status()
-    resources = resp.json()["result"]["resources"]
-    csvs = [r for r in resources if str(r.get("format", "")).lower() == "csv" and r.get("url")]
-    if not csvs:
+    res = [r for r in resp.json()["result"]["resources"]
+           if str(r.get("format", "")).lower() == "csv" and r.get("url")]
+    if not res:
         raise ValueError("no CSV resources on CKAN dataset")
-    frames = []
-    for r in csvs[:6]:  # cap: these dumps are large
-        try:
-            raw = requests.get(r["url"], timeout=60)
-            raw.raise_for_status()
-            frames.append(pd.read_csv(io.BytesIO(raw.content), low_memory=False))
-            log.info("downloaded resource %s (%d bytes)", r.get("name", "?"), len(raw.content))
-        except Exception as exc:  # noqa: BLE001
-            log.warning("skipping resource %s: %s", r.get("name", "?"), exc)
-    if not frames:
-        raise ValueError("all CSV resources failed to download")
-    return pd.concat(frames, ignore_index=True)
+
+    def _find(*needles):
+        for r in res:
+            hay = f"{r.get('name', '')} {r.get('url', '')}".lower()
+            if any(n in hay for n in needles):
+                return r
+        return None
+
+    ts_res = _find("daily", "timeseries", "time series", "displacement-daily")
+    st_res = _find("station")
+    if ts_res is None:  # last resort: biggest CSV is probably the timeseries
+        ts_res = max(res, key=lambda r: r.get("size") or 0)
+
+    ts = _read_csv_url(ts_res["url"])
+    log.info("CA DWR timeseries resource '%s': %s", ts_res.get("name"), ts.shape)
+
+    st = _read_csv_url(st_res["url"]) if st_res is not None else None
+    s_id = _pick(list(ts.columns), "station") or _pick(list(ts.columns), "site")
+    if st is not None and s_id is not None:
+        st_id = _pick(list(st.columns), "station") or _pick(list(st.columns), "site")
+        lat = _pick(list(st.columns), "lat")
+        lon = _pick(list(st.columns), "lon") or _pick(list(st.columns), "long")
+        if st_id and lat and lon:
+            st = st[[st_id, lat, lon]].rename(columns={st_id: s_id})
+            ts = ts.merge(st, on=s_id, how="left")
+            log.info("joined station coords (%d stations)", st[s_id].nunique())
+    return ts
 
 
 def _pick(cols: list[str], *needles: str) -> str | None:
@@ -96,12 +120,14 @@ def _normalise_displacement(df: pd.DataFrame) -> pd.DataFrame:
     c_lon = _pick(cols, "lon") or _pick(cols, "long")
     c_date = _pick(cols, "date") or _pick(cols, "time")
     c_disp = (
-        _pick(cols, "vertical")
+        _pick(cols, "vertical", "dsp")
+        or _pick(cols, "vertical")
         or _pick(cols, "displacement")
         or _pick(cols, "subsidence")
         or _pick(cols, "elevation", "change")
         or _pick(cols, "settlement")
     )
+    c_qc = _pick(cols, "dsp", "qc") or _pick(cols, "qc") or _pick(cols, "quality")
     missing = [n for n, c in dict(station=c_station, lat=c_lat, lon=c_lon,
                                   date=c_date, displacement=c_disp).items() if c is None]
     if missing:
@@ -113,20 +139,28 @@ def _normalise_displacement(df: pd.DataFrame) -> pd.DataFrame:
         "lat": pd.to_numeric(df[c_lat], errors="coerce"),
         "lon": pd.to_numeric(df[c_lon], errors="coerce"),
         "disp_raw": pd.to_numeric(df[c_disp], errors="coerce"),
+        "qc": pd.to_numeric(df[c_qc], errors="coerce") if c_qc else 1,
     }).dropna(subset=["date", "lat", "lon", "disp_raw"])
 
-    # Heuristic unit -> millimetres (subsidence positive). CA DWR dumps have
-    # appeared in feet, metres and centimetres over the years.
+    # Keep only good-quality readings (CA DWR QC code 1 = "good data").
+    if c_qc:
+        before = len(out)
+        out = out[out["qc"].isin([1, 2])]
+        log.info("QC filter kept %d / %d rows", len(out), before)
+
+    # Heuristic unit -> millimetres. CA DWR extensometer VERTICAL_DSP is in feet
+    # (values ~0.01-20); older/other dumps have used cm / m / mm.
     span = out["disp_raw"].abs().quantile(0.99)
     name = (c_disp or "").lower()
     if "mm" in name or span > 300:
         scale = 1.0
     elif "cm" in name or span > 30:
         scale = 10.0
-    elif "ft" in name or "feet" in name:
+    elif "ft" in name or "feet" in name or 0.02 < span <= 30:
         scale = 304.8
     else:  # metres
         scale = 1000.0
+    log.info("displacement unit scale -> mm: x%.4g (99p span=%.3g raw)", scale, span)
     out["settlement_mm"] = out["disp_raw"] * scale
 
     # Orient so that subsidence (ground going down) is positive. CA DWR reports
