@@ -100,6 +100,7 @@ def build_timeseries(cfg: Config, save: bool = True) -> pd.DataFrame:
     for col in ("temp_c", "humidity_pct"):
         daily[col] = daily.groupby("station_id")[col].transform(
             lambda s: s.interpolate(limit_direction="both"))
+    daily["rain_mm"] = daily["rain_mm"].fillna(0.0)
     daily["data_source_wx"] = daily["data_source_wx"].fillna("synthetic_fallback")
 
     daily = daily.dropna(subset=["distance_mm", "tilt_deg", "temp_c", "humidity_pct"])

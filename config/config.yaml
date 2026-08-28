@@ -18,7 +18,9 @@ data:
     ckan_base: "https://data.ca.gov/api/3/action"
     dataset_id: "wdl-ground-surface-displacement-land-subsidence-monitoring"
   weather:
-    provider: meteostat        # falls back to a seasonal model if unavailable
+    provider: open-meteo       # real temp/humidity/rain at each station's coords
+                               # (Open-Meteo archive/ERA5, no key); falls back to
+                               # meteostat, then a seasonal model
   min_date: "2016-01-01"
   max_date: "2023-12-31"
   # If the network is unreachable or the remote schema is unrecognised, emit a

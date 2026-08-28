@@ -2,7 +2,8 @@
 
 1. ``load_ground_displacement`` -> CA DWR ground-surface displacement, normalised
    to columns: station_id, date, lat, lon, settlement_mm  (positive = subsidence).
-2. ``load_weather`` -> daily temperature / relative humidity per station.
+2. ``load_weather`` -> daily temperature / relative humidity / precipitation at
+   each station's coordinates (Open-Meteo archive API by default).
 
 Both prefer real data. If the network is unreachable or the remote schema is
 unrecognised, and ``data.allow_synthetic_fallback`` is true, a labelled
@@ -24,7 +25,7 @@ from ..utils import get_logger
 log = get_logger("minesub.data.sources")
 
 _GD_COLUMNS = ["station_id", "date", "lat", "lon", "settlement_mm", "data_source"]
-_WX_COLUMNS = ["station_id", "date", "temp_c", "humidity_pct", "data_source"]
+_WX_COLUMNS = ["station_id", "date", "temp_c", "humidity_pct", "rain_mm", "data_source"]
 
 # San Joaquin Valley bounding box (the CA DWR subsidence monitoring footprint).
 _BBOX = dict(lat_min=35.0, lat_max=37.4, lon_min=-120.7, lon_max=-119.1)
@@ -172,68 +173,123 @@ def _normalise_displacement(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Weather (Meteostat, with a seasonal fallback)
+# Weather: real historical temp / relative humidity / precipitation at each
+# station's coordinates. Open-Meteo's archive API (ERA5 reanalysis) is the
+# default: free, no API key, one request per station. Meteostat and a seasonal
+# model are fallbacks. Per-station responses are cached under data/raw/weather/.
 # ---------------------------------------------------------------------------
 def load_weather(cfg: Config, stations: pd.DataFrame) -> pd.DataFrame:
     """``stations`` needs columns station_id, lat, lon. Returns daily weather."""
     dcfg = cfg["data"]
-    start = pd.Timestamp(dcfg["min_date"]).to_pydatetime()
-    end = pd.Timestamp(dcfg["max_date"]).to_pydatetime()
-    provider = dcfg.get("weather", {}).get("provider", "meteostat")
+    start = pd.Timestamp(dcfg["min_date"])
+    end = pd.Timestamp(dcfg["max_date"])
+    provider = dcfg.get("weather", {}).get("provider", "open-meteo")
+    cache_dir = cfg.paths["raw"] / "weather"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    order = {"open-meteo": ["open-meteo", "meteostat"],
+             "meteostat": ["meteostat", "open-meteo"]}.get(provider, [])
 
     frames: list[pd.DataFrame] = []
-    real_ok = 0
-    if provider == "meteostat":
-        try:
-            from meteostat import Daily, Stations  # noqa: F401
-        except Exception as exc:  # noqa: BLE001
-            log.warning("meteostat import failed (%s); seasonal fallback for all", exc)
-        else:
-            for row in stations.itertuples(index=False):
-                wx = _meteostat_one(row.station_id, row.lat, row.lon, start, end)
-                if wx is not None and len(wx) > 30:
-                    frames.append(wx)
-                    real_ok += 1
-                else:
-                    frames.append(_synthetic_weather_one(row.station_id, row.lat,
-                                                         start, end, seed=int(cfg["seed"])))
-    if not frames:  # provider unknown or everything failed
-        for row in stations.itertuples(index=False):
-            frames.append(_synthetic_weather_one(row.station_id, row.lat, start, end,
-                                                 seed=int(cfg["seed"])))
+    by_src: dict[str, int] = {}
+    for row in stations.itertuples(index=False):
+        wx = None
+        for src in order:
+            fn = (_openmeteo_one if src == "open-meteo" else _meteostat_one)
+            try:
+                wx = fn(row.station_id, float(row.lat), float(row.lon), start, end, cache_dir)
+            except Exception as exc:  # noqa: BLE001
+                log.debug("%s failed for %s: %s", src, row.station_id, exc)
+                wx = None
+            if wx is not None and len(wx) > 30:
+                by_src[src] = by_src.get(src, 0) + 1
+                break
+            wx = None
+        if wx is None:
+            wx = _synthetic_weather_one(row.station_id, row.lat, start, end, seed=int(cfg["seed"]))
+            by_src["synthetic_fallback"] = by_src.get("synthetic_fallback", 0) + 1
+        frames.append(wx)
 
     out = pd.concat(frames, ignore_index=True)
-    log.info("weather: %d rows, %d/%d stations from real feed",
-             len(out), real_ok, len(stations))
+    log.info("weather: %d rows; stations by source: %s", len(out), by_src)
     return out[_WX_COLUMNS].sort_values(["station_id", "date"]).reset_index(drop=True)
 
 
-def _meteostat_one(station_id, lat, lon, start, end) -> pd.DataFrame | None:
-    try:
-        from meteostat import Daily, Stations
+def _openmeteo_one(station_id, lat, lon, start, end, cache_dir) -> pd.DataFrame | None:
+    cache = cache_dir / f"openmeteo_{station_id}_{start:%Y%m%d}_{end:%Y%m%d}.csv"
+    if cache.exists():
+        df = pd.read_csv(cache, parse_dates=["date"])
+    else:
+        r = requests.get("https://archive-api.open-meteo.com/v1/archive", params={
+            "latitude": round(lat, 4), "longitude": round(lon, 4),
+            "start_date": f"{start:%Y-%m-%d}", "end_date": f"{end:%Y-%m-%d}",
+            "daily": "temperature_2m_mean,relative_humidity_2m_mean,precipitation_sum",
+            "timezone": "UTC",
+        }, timeout=60)
+        r.raise_for_status()
+        d = r.json().get("daily", {})
+        if not d.get("time"):
+            return None
+        df = pd.DataFrame({
+            "date": pd.to_datetime(d["time"]),
+            "temp_c": pd.to_numeric(pd.Series(d.get("temperature_2m_mean")), errors="coerce"),
+            "humidity_pct": pd.to_numeric(pd.Series(d.get("relative_humidity_2m_mean")), errors="coerce"),
+            "rain_mm": pd.to_numeric(pd.Series(d.get("precipitation_sum")), errors="coerce"),
+        })
+        df.to_csv(cache, index=False)
+    if df["temp_c"].notna().mean() < 0.5:
+        return None
+    for c in ("temp_c", "humidity_pct"):
+        df[c] = df[c].interpolate(limit_direction="both")
+    df["rain_mm"] = df["rain_mm"].fillna(0.0)
+    df["station_id"] = station_id
+    df["data_source"] = "open-meteo"
+    return df
 
-        near = Stations().nearby(float(lat), float(lon)).fetch(1)
-        if near is None or near.empty:
+
+def _meteostat_one(station_id, lat, lon, start, end, cache_dir=None) -> pd.DataFrame | None:
+    """Fallback provider. Best-effort against whichever meteostat API is present
+    (1.x ``Daily``/``Stations`` or 2.x ``daily``); returns None on any mismatch."""
+    try:
+        import meteostat as ms
+
+        if hasattr(ms, "Daily") and hasattr(ms, "Stations"):        # meteostat 1.x
+            near = ms.Stations().nearby(float(lat), float(lon)).fetch(1)
+            if near is None or near.empty:
+                return None
+            daily = ms.Daily(near.index[0], start.to_pydatetime(),
+                             end.to_pydatetime()).fetch()
+        elif hasattr(ms, "daily"):                                  # meteostat 2.x
+            ts = ms.daily(ms.Point(float(lat), float(lon)),
+                          start.to_pydatetime(), end.to_pydatetime())
+            daily = ts.fetch() if hasattr(ts, "fetch") else ts
+        else:
             return None
-        ms_id = near.index[0]
-        daily = Daily(ms_id, start, end).fetch()
-        if daily is None or daily.empty or "tavg" not in daily:
+        if daily is None or getattr(daily, "empty", True):
             return None
-        daily = daily.reset_index().rename(columns={"time": "date"})
-        temp = pd.to_numeric(daily["tavg"], errors="coerce")
+
+        daily = daily.reset_index()
+        daily.columns = [str(c).lower() for c in daily.columns]
+        date_col = next((c for c in ("time", "date") if c in daily), None)
+        temp_col = next((c for c in ("tavg", "temp") if c in daily), None)
+        if date_col is None or temp_col is None:
+            return None
+        temp = pd.to_numeric(daily[temp_col], errors="coerce")
         if temp.notna().mean() < 0.5:
             return None
         temp = temp.interpolate().bfill().ffill()
-        if "rhum" in daily and pd.to_numeric(daily["rhum"], errors="coerce").notna().mean() > 0.5:
-            hum = pd.to_numeric(daily["rhum"], errors="coerce").interpolate().bfill().ffill()
-        else:  # derive a plausible RH from temperature + precipitation
-            prcp = pd.to_numeric(daily.get("prcp", 0.0), errors="coerce").fillna(0.0)
+        prcp = pd.to_numeric(daily.get("prcp", 0.0), errors="coerce").fillna(0.0)
+        rh_col = next((c for c in ("rhum", "relative_humidity") if c in daily), None)
+        if rh_col and pd.to_numeric(daily[rh_col], errors="coerce").notna().mean() > 0.5:
+            hum = pd.to_numeric(daily[rh_col], errors="coerce").interpolate().bfill().ffill()
+        else:
             hum = (72.0 - 1.4 * (temp - temp.mean()) + 6.0 * np.tanh(prcp / 5.0)).clip(8, 100)
         return pd.DataFrame({
             "station_id": station_id,
-            "date": pd.to_datetime(daily["date"]),
+            "date": pd.to_datetime(daily[date_col]),
             "temp_c": temp.to_numpy(),
             "humidity_pct": np.asarray(hum, dtype=float),
+            "rain_mm": np.asarray(prcp, dtype=float),
             "data_source": "meteostat",
         })
     except Exception as exc:  # noqa: BLE001
@@ -253,9 +309,12 @@ def _synthetic_weather_one(station_id, lat, start, end, seed: int) -> pd.DataFra
     temp = mean_annual + 11.0 * seasonal + rng.normal(0, 2.4, len(dates))
     humidity = (58.0 - 1.3 * (temp - mean_annual) + 12.0 * (-seasonal)
                 + rng.normal(0, 6.0, len(dates))).clip(8, 100)
+    # sparse, winter-weighted rainfall (Mediterranean climate)
+    wet = np.clip(-seasonal, 0, None) ** 1.5
+    rain = rng.gamma(0.5, 6.0, len(dates)) * (rng.random(len(dates)) < 0.18 * wet + 0.02)
     return pd.DataFrame({
         "station_id": station_id, "date": dates,
-        "temp_c": temp, "humidity_pct": humidity,
+        "temp_c": temp, "humidity_pct": humidity, "rain_mm": rain,
         "data_source": "synthetic_fallback",
     })
 

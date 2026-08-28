@@ -53,6 +53,9 @@ def _backward_features(win: pd.DataFrame) -> dict[str, float]:
     ti = win["tilt_deg"].to_numpy()
     hu = win["humidity_pct"].to_numpy()
     te = win["temp_c"].to_numpy()
+    # rain is optional (a live 4-sensor node may not report it) -> zeros
+    rn = (win["rain_mm"].to_numpy() if "rain_mm" in win
+          else np.zeros(len(d), dtype=float))
     doy = int(win["date"].iloc[-1].dayofyear)
     return {
         "distance_last": d[-1],
@@ -73,6 +76,10 @@ def _backward_features(win: pd.DataFrame) -> dict[str, float]:
         "temp_mean": float(np.mean(te)),
         "temp_range": float(te.max() - te.min()),
         "temp_std": float(np.std(te)),
+        "rain_sum": float(np.sum(rn)),
+        "rain_max": float(np.max(rn)) if len(rn) else 0.0,
+        "rain_recent7": float(np.sum(rn[-7:])),
+        "rain_days": float(np.count_nonzero(rn > 1.0)),
         "doy_sin": np.sin(2 * np.pi * doy / 365.25),
         "doy_cos": np.cos(2 * np.pi * doy / 365.25),
     }
