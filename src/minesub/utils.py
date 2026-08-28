@@ -5,6 +5,10 @@ import logging
 import os
 import random
 
+# Cap OpenMP threads before numpy / lightgbm / torch pull in their runtimes —
+# avoids an intermittent libomp race in LightGBM's Dataset build on macOS/arm.
+os.environ.setdefault("OMP_NUM_THREADS", "4")
+
 import numpy as np
 
 _LOG_FORMAT = "%(asctime)s  %(levelname)-7s  %(name)s  %(message)s"

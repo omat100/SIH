@@ -1,6 +1,7 @@
 """Primary model: LightGBM gradient-boosted trees on the windowed features."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import joblib
@@ -8,6 +9,16 @@ import numpy as np
 import pandas as pd
 from lightgbm import LGBMClassifier, early_stopping, log_evaluation
 from sklearn.utils.class_weight import compute_class_weight
+
+# LightGBM's multithreaded Dataset construction can race intermittently on
+# macOS/arm libomp; a fixed, modest thread count makes it deterministic.
+_N_JOBS = max(1, min(4, (os.cpu_count() or 2)))
+
+
+def _as_matrix(X) -> np.ndarray:
+    """LightGBM segfaults on some non-C-contiguous float64 blocks (pandas 3
+    ``.to_numpy()`` returns F-order). Force a clean C-contiguous copy."""
+    return np.ascontiguousarray(np.asarray(X, dtype=np.float64))
 
 from .. import RISK_CLASSES
 from ..config import Config
@@ -24,6 +35,7 @@ class LgbmRiskModel:
 
     def fit(self, Xtr, ytr, Xva, yva):
         p = self.cfg["model"]["lgbm"]
+        Xtr, Xva = _as_matrix(Xtr), _as_matrix(Xva)
         classes = np.arange(len(RISK_CLASSES))
         w = compute_class_weight("balanced", classes=classes, y=ytr)
         cw = {int(c): float(wi) for c, wi in zip(classes, w)}
@@ -40,7 +52,8 @@ class LgbmRiskModel:
             min_child_samples=int(p["min_child_samples"]),
             class_weight=cw,
             random_state=int(self.cfg["seed"]),
-            n_jobs=-1,
+            force_col_wise=True,
+            n_jobs=_N_JOBS,
         )
         self.model.fit(
             Xtr, ytr,
@@ -53,7 +66,7 @@ class LgbmRiskModel:
         return self
 
     def predict_proba(self, X) -> np.ndarray:
-        return self.model.predict_proba(X)
+        return self.model.predict_proba(_as_matrix(X))
 
     def feature_importance(self) -> pd.Series:
         return pd.Series(self.model.feature_importances_, index=self.feature_cols
