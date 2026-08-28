@@ -12,7 +12,7 @@ from .utils import get_logger, set_seed
 
 log = get_logger("minesub.train")
 
-_MODEL_FILES = {"lgbm": "lgbm.joblib", "torch": "lstm.pt"}
+_MODEL_FILES = {"gbdt": "gbdt.joblib", "torch": "lstm.pt"}
 
 
 def _load_inputs(cfg: Config):
@@ -33,20 +33,21 @@ def train(cfg: Config, model_name: str) -> dict:
     reports = cfg.paths["reports"]
     models_dir = cfg.paths["models"]
 
-    if model_name == "lgbm":
-        from .models.lgbm_model import LgbmRiskModel
+    if model_name == "gbdt":
+        from .models.gbdt_model import GbdtRiskModel
 
         feats = feature_columns(samples)
         X = samples[feats].to_numpy(dtype=float)
-        model = LgbmRiskModel(cfg, feats)
+        model = GbdtRiskModel(cfg, feats)
         model.fit(X[tr], y[tr], X[va], y[va])
         proba = model.predict_proba(X[te])
-        model.save(models_dir / _MODEL_FILES["lgbm"])
+        model.save(models_dir / _MODEL_FILES["gbdt"])
 
         imp = model.feature_importance()
-        imp.to_csv(reports / "feature_importance_lgbm.csv", header=["gain"])
-        log.info("top features:\n%s", imp.head(10).to_string())
-        extra = {"top_features": imp.head(10).round(1).to_dict()}
+        if not imp.empty:
+            imp.to_csv(reports / "feature_importance_gbdt.csv", header=["perm_importance"])
+            log.info("top features:\n%s", imp.head(10).to_string())
+        extra = {"top_features": imp.head(10).round(4).to_dict()}
     else:
         from .models.torch_model import LSTMRiskModel
 
