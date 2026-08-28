@@ -23,7 +23,7 @@ from .utils import get_logger
 
 log = get_logger("minesub.predict")
 
-_MODEL_FILES = {"lgbm": "lgbm.joblib", "torch": "lstm.pt"}
+_MODEL_FILES = {"gbdt": "gbdt.joblib", "torch": "lstm.pt"}
 
 
 def _to_frame(readings) -> pd.DataFrame:
@@ -39,7 +39,7 @@ def _to_frame(readings) -> pd.DataFrame:
     return df.sort_values("date").reset_index(drop=True)
 
 
-def predict(readings, model: str = "lgbm", cfg: Config | None = None,
+def predict(readings, model: str = "gbdt", cfg: Config | None = None,
             model_path: str | None = None) -> dict:
     if model not in _MODEL_FILES:
         raise ValueError(f"model must be one of {list(_MODEL_FILES)}")
@@ -48,16 +48,16 @@ def predict(readings, model: str = "lgbm", cfg: Config | None = None,
 
     W = int(cfg["features"]["backward_window_days"])
     seq_len = int(cfg["model"]["torch"]["seq_len"])
-    need = W if model == "lgbm" else seq_len
+    need = W if model == "gbdt" else seq_len
     if len(df) < min(need, int(cfg["features"]["min_periods"])):
         raise ValueError(f"need >= {need} readings for model '{model}', got {len(df)}")
 
     path = model_path or (cfg.paths["models"] / _MODEL_FILES[model])
 
-    if model == "lgbm":
-        from .models.lgbm_model import LgbmRiskModel
+    if model == "gbdt":
+        from .models.gbdt_model import GbdtRiskModel
 
-        m = LgbmRiskModel.load(cfg, path)
+        m = GbdtRiskModel.load(cfg, path)
         win = df.iloc[-W:][["date", *RAW_CHANNELS]]
         feats = backward_window_features(win)
         feats["days_since_start"] = float((df["date"].iloc[-1] - df["date"].iloc[0]).days)

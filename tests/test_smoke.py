@@ -21,7 +21,7 @@ def cfg(tmp_path) -> Config:
     raw["features"]["step_days"] = 10
     raw["model"]["torch"]["max_epochs"] = 2
     raw["model"]["torch"]["seq_len"] = 20
-    raw["model"]["lgbm"]["n_estimators"] = 60
+    raw["model"]["gbdt"]["max_iter"] = 60
     for k in raw["paths"]:
         raw["paths"][k] = str(tmp_path / raw["paths"][k])
     c = Config(raw=raw, path=base.path)
@@ -39,10 +39,10 @@ def test_pipeline_train_predict(cfg):
     assert set(labelled["risk_class"].cat.categories) == {"safe", "watch", "critical"}
     assert (cfg.paths["processed"] / "timeseries.parquet").exists()
 
-    m = train(cfg, "lgbm")
+    m = train(cfg, "gbdt")
     assert 0.0 <= m["accuracy"] <= 1.0
     assert "recall_critical" in m
-    assert (cfg.paths["models"] / "lgbm.joblib").exists()
+    assert (cfg.paths["models"] / "gbdt.joblib").exists()
 
     m_t = train(cfg, "torch")
     assert 0.0 <= m_t["macro_f1"] <= 1.0
@@ -56,6 +56,6 @@ def test_pipeline_train_predict(cfg):
          "tilt_deg": r.tilt_deg, "distance_mm": r.distance_mm}
         for r in one.itertuples(index=False)
     ]
-    out = predict(readings, model="lgbm", cfg=cfg)
+    out = predict(readings, model="gbdt", cfg=cfg)
     assert out["risk_class"] in {"safe", "watch", "critical"}
     assert abs(sum(out["probabilities"].values()) - 1.0) < 1e-5

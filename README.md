@@ -41,11 +41,17 @@ test).
 
 | Role | Model | Input |
 |---|---|---|
-| Primary | **LightGBM** 3-class, class-balanced, early stopping | windowed feature vector |
-| Secondary | **PyTorch** 2-layer LSTM + MLP head | raw `[seq_len, 4]` daily sequence |
+| Primary (`gbdt`) | **Histogram GBDT** (scikit-learn `HistGradientBoostingClassifier`), 3-class, class-balanced, early stopping | windowed feature vector |
+| Secondary (`torch`) | **PyTorch** 2-layer LSTM + MLP head | raw `[seq_len, 4]` daily sequence |
+
+The primary backend is scikit-learn's histogram GBDT (same algorithm family as
+LightGBM/XGBoost, no native OpenMP dependency). LightGBM is available as an
+optional drop-in — `pip install -e ".[lightgbm]"` and set
+`model.gbdt.backend: lightgbm` — but some macOS LightGBM builds crash in native
+code, so it is not the default.
 
 Metrics (written to `reports/`): accuracy, macro-F1, **recall on `critical`**,
-one-vs-rest PR-AUC, confusion matrix PNG, and LightGBM feature importances.
+one-vs-rest PR-AUC, confusion-matrix PNG, and permutation feature importances.
 
 ## Setup (Python 3.11)
 
@@ -64,8 +70,8 @@ python3.11 -m venv .venv
 # or step by step
 .venv/bin/python -m minesub pipeline            # -> data/processed/*.parquet
 .venv/bin/python -m minesub train --model both  # -> artifacts/models/, reports/
-.venv/bin/python -m minesub evaluate --model lgbm
-.venv/bin/python -m minesub predict --model lgbm --input my_readings.json
+.venv/bin/python -m minesub evaluate --model gbdt
+.venv/bin/python -m minesub predict --model gbdt --input my_readings.json
 ```
 
 `scripts/run_pipeline.sh` chains pipeline + train.
@@ -78,7 +84,7 @@ python3.11 -m venv .venv
   {"date": "2024-01-02", "temp_c": 18.3, "humidity_pct": 57.4, "tilt_deg": 0.005, "distance_mm": 13.1}
 ]
 ```
-≥ 30 daily readings for `lgbm`, ≥ 30 for `torch` (`seq_len`). Returns the risk
+≥ 30 daily readings for `gbdt`, ≥ 30 for `torch` (`seq_len`). Returns the risk
 class, class probabilities, the 14-day horizon, and the raw rate/acceleration
 signals that drove it.
 
@@ -92,7 +98,7 @@ src/minesub/
   features.py              backward-window features + forward-horizon targets
   labels.py                hazard score -> safe/watch/critical
   datasplit.py             temporal split
-  models/lgbm_model.py     primary
+  models/gbdt_model.py     primary (histogram GBDT)
   models/torch_model.py    secondary (PyTorch LSTM)
   train.py / evaluate.py / predict.py / pipeline.py
 tests/test_smoke.py        offline end-to-end check
@@ -110,4 +116,3 @@ tests/test_smoke.py        offline end-to-end check
   a geophone later.
 * **Per-node baselines** — field thresholds should be learned per installation
   during a stable commissioning period.
-```

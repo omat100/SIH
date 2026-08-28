@@ -24,15 +24,15 @@ def main(argv: list[str] | None = None) -> int:
 
     p_tr = sub.add_parser("train", help="train a model on the labelled samples")
     _add_common(p_tr)
-    p_tr.add_argument("--model", choices=["lgbm", "torch", "both"], default="lgbm")
+    p_tr.add_argument("--model", choices=["gbdt", "torch", "both"], default="gbdt")
 
     p_ev = sub.add_parser("evaluate", help="re-score a saved model on the test split")
     _add_common(p_ev)
-    p_ev.add_argument("--model", choices=["lgbm", "torch"], default="lgbm")
+    p_ev.add_argument("--model", choices=["gbdt", "torch"], default="gbdt")
 
     p_pr = sub.add_parser("predict", help="run live inference on a JSON list of readings")
     _add_common(p_pr)
-    p_pr.add_argument("--model", choices=["lgbm", "torch"], default="lgbm")
+    p_pr.add_argument("--model", choices=["gbdt", "torch"], default="gbdt")
     p_pr.add_argument("--input", required=True, help="JSON file: list of reading objects")
 
     p_demo = sub.add_parser("demo", help="pipeline + train both models + sample prediction")
@@ -56,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
         run_pipeline(cfg)
     elif args.cmd == "train":
         from .train import train
-        names = ["lgbm", "torch"] if args.model == "both" else [args.model]
+        names = ["gbdt", "torch"] if args.model == "both" else [args.model]
         summary = {n: train(cfg, n) for n in names}
         print(json.dumps({k: _slim(v) for k, v in summary.items()}, indent=2))
     elif args.cmd == "evaluate":
@@ -88,9 +88,9 @@ def _evaluate_saved(cfg, model_name: str) -> None:
     _, _, te = temporal_split(cfg, samples)
     y = samples["y"].to_numpy()
 
-    if model_name == "lgbm":
-        from .models.lgbm_model import LgbmRiskModel
-        m = LgbmRiskModel.load(cfg, cfg.paths["models"] / "lgbm.joblib")
+    if model_name == "gbdt":
+        from .models.gbdt_model import GbdtRiskModel
+        m = GbdtRiskModel.load(cfg, cfg.paths["models"] / "gbdt.joblib")
         proba = m.predict_proba(samples[feature_columns(samples)].to_numpy(dtype=float)[te])
     else:
         from .models.torch_model import LSTMRiskModel
@@ -109,7 +109,7 @@ def _demo(cfg) -> None:
     from .train import train
 
     run_pipeline(cfg)
-    results = {n: _slim(train(cfg, n)) for n in ("lgbm", "torch")}
+    results = {n: _slim(train(cfg, n)) for n in ("gbdt", "torch")}
     print(json.dumps(results, indent=2))
 
     # a fabricated "accelerating" recent window to show the inference shape
@@ -127,7 +127,7 @@ def _demo(cfg) -> None:
         }
         for d, i in zip(dates, t)
     ]
-    for model in ("lgbm", "torch"):
+    for model in ("gbdt", "torch"):
         print(f"\n--- sample predict ({model}) ---")
         print(json.dumps(predict(readings, model=model, cfg=cfg), indent=2))
 
