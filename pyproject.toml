@@ -29,6 +29,3 @@ minesub = "minesub.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-minesub = ["../../config/config.yaml"]

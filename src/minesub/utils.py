@@ -21,6 +21,7 @@ def get_logger(name: str) -> logging.Logger:
         handler.setFormatter(logging.Formatter(_LOG_FORMAT, datefmt="%H:%M:%S"))
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
+        logger.propagate = False        # avoid double emit via parent handlers
     return logger
 
 

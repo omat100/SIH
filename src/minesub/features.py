@@ -88,8 +88,11 @@ def _robust_rate(y: np.ndarray) -> float:
 
 
 def _forward_targets(fwd: pd.DataFrame) -> dict[str, float]:
-    d = fwd["distance_mm"].to_numpy()
-    ti = fwd["tilt_deg"].to_numpy()
+    # smooth the forward window before measuring rate/accel: the LABEL should
+    # capture sustained deformation, not a 2-3 day noise blip. (Backward features
+    # stay raw — that's what a field node actually observes.)
+    d = fwd["distance_mm"].rolling(7, center=True, min_periods=1).mean().to_numpy()
+    ti = fwd["tilt_deg"].rolling(7, center=True, min_periods=1).mean().to_numpy()
     h = len(d) // 2
     return {
         "fwd_settlement_rate": _robust_rate(d),                       # mm / day

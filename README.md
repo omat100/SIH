@@ -29,13 +29,15 @@ For a sample at time `t` (one station):
 * **features** summarise the backward window `[t − 30d, t]` — rates, accelerations,
   rolling spread of each channel, seasonal encodings. This is what a node has
   observed so far.
-* **label** summarises the forward horizon `[t + 1, t + 14d]` — forward
-  settlement rate, its acceleration, forward tilt rate → composite hazard score →
-  `safe` / `watch` / `critical`. Never fed to the model.
+* **label** summarises the forward horizon `[t + 1, t + 21d]` (7-day-smoothed, so
+  it reflects *sustained* deformation, not a noise blip) — forward settlement
+  rate **in excess of the node's own trailing rate**, its acceleration, and
+  excess forward tilt rate → composite hazard score → `safe` / `watch` /
+  `critical`. Never fed to the model.
 
-So it is a genuine 14-day-ahead forecast, and the label cannot leak into the
-features. Train/val/test is a **temporal** split (earliest windows train, latest
-test).
+So it is a genuine ~3-week-ahead forecast of a *change* in behaviour, and the
+label cannot leak into the features. Train/val/test is a **temporal** split
+(earliest windows train, latest test).
 
 ## Models
 
@@ -52,6 +54,12 @@ code, so it is not the default.
 
 Metrics (written to `reports/`): accuracy, macro-F1, **recall on `critical`**,
 one-vs-rest PR-AUC, confusion-matrix PNG, and permutation feature importances.
+
+> On the **synthetic fallback** the target is deliberately noisy (abrupt onsets +
+> measurement noise), so metrics land around macro-F1 ≈ 0.4–0.5 — enough to show
+> the pipeline learns real signal, not a benchmark. `train` prints a banner and
+> sets `"synthetic_data": true` in the metrics JSON whenever the CA DWR feed
+> wasn't used. Real evaluation needs the real feed.
 
 ## Setup (Python 3.11)
 
@@ -85,7 +93,7 @@ python3.11 -m venv .venv
 ]
 ```
 ≥ 30 daily readings for `gbdt`, ≥ 30 for `torch` (`seq_len`). Returns the risk
-class, class probabilities, the 14-day horizon, and the raw rate/acceleration
+class, class probabilities, the horizon (days), and the raw rate/acceleration
 signals that drove it.
 
 ## Layout
