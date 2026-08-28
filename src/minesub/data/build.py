@@ -36,10 +36,14 @@ def _resample_daily(disp: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(out, ignore_index=True)
 
 
-def _derive_tilt(daily: pd.DataFrame, max_neighbor_m: float, fallback_baseline_m: float) -> pd.DataFrame:
+def _derive_tilt(daily: pd.DataFrame, max_neighbor_m: float, fallback_baseline_m: float,
+                 sensor_noise_deg: float = 0.0, seed: int = 0) -> pd.DataFrame:
     """tilt = arctan(differential settlement between a station and its nearest
     neighbour / horizontal baseline). This is exactly how a geotechnical
-    tiltmeter is interpreted; here the baseline is the inter-station distance."""
+    tiltmeter is interpreted; here the baseline is the inter-station distance.
+    ``sensor_noise_deg`` adds independent per-reading noise so tilt is not a
+    perfectly deterministic function of the settlement channel."""
+    rng = np.random.default_rng(seed)
     coords = (daily.groupby("station_id")[["lat", "lon"]].first().reset_index())
     ids = coords["station_id"].to_numpy()
     lat = coords["lat"].to_numpy()
@@ -65,7 +69,10 @@ def _derive_tilt(daily: pd.DataFrame, max_neighbor_m: float, fallback_baseline_m
         else:  # isolated station: gradient vs the regional mean over a nominal baseline
             baseline_mm = fallback_baseline_m * 1000.0
             diff = wide[sid] - global_mean
-        tilt_cols[sid] = np.degrees(np.arctan(diff / baseline_mm))
+        t = np.degrees(np.arctan(diff / baseline_mm))
+        if sensor_noise_deg > 0:
+            t = t + rng.normal(0.0, sensor_noise_deg, size=len(t))
+        tilt_cols[sid] = t
 
     tilt = pd.DataFrame(tilt_cols, index=wide.index).reset_index().melt(
         id_vars="date", var_name="station_id", value_name="tilt_deg")
@@ -79,7 +86,9 @@ def build_timeseries(cfg: Config, save: bool = True) -> pd.DataFrame:
 
     tcfg = cfg["tilt"]
     daily = _derive_tilt(daily, float(tcfg["max_neighbor_distance_m"]),
-                         float(tcfg["fallback_baseline_m"]))
+                         float(tcfg["fallback_baseline_m"]),
+                         sensor_noise_deg=float(tcfg.get("sensor_noise_deg", 0.0)),
+                         seed=int(cfg["seed"]))
 
     stations = daily.groupby("station_id")[["lat", "lon"]].first().reset_index()
     wx = load_weather(cfg, stations)

@@ -24,8 +24,11 @@ data:
   # If the network is unreachable or the remote schema is unrecognised, emit a
   # clearly-labelled physical surrogate with the SAME normalised schema so the
   # whole pipeline still runs. Rows carry data_source = "synthetic_fallback".
+  # The surrogate is deliberately noisy with abrupt-onset episodes so it poses a
+  # real forecasting problem; it is NOT a substitute for the CA DWR feed.
   allow_synthetic_fallback: true
   synthetic_n_stations: 45
+  synthetic_noise_mm: 2.5
 
 tilt:
   # Tilt is derived from the spatial gradient of settlement: for each station we
@@ -33,6 +36,7 @@ tilt:
   # tilt = arctan(delta_settlement / horizontal_baseline).
   max_neighbor_distance_m: 25000
   fallback_baseline_m: 1000
+  sensor_noise_deg: 0.003        # independent per-reading tiltmeter noise
 
 features:
   backward_window_days: 30      # features look back over this window (ending at t)

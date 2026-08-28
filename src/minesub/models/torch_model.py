@@ -138,7 +138,8 @@ class LSTMRiskModel:
 
     @classmethod
     def load(cls, cfg: Config, path: str | Path) -> "LSTMRiskModel":
-        blob = torch.load(path, map_location="cpu")
+        # our own artifact (contains numpy mu/sd arrays) -> full unpickle
+        blob = torch.load(path, map_location="cpu", weights_only=False)
         obj = cls(cfg)
         a = blob["arch"]
         obj.net = _LSTMNet(a["n_ch"], a["hidden"], a["layers"], a["dropout"],

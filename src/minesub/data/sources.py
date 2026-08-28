@@ -55,6 +55,7 @@ def load_ground_displacement(cfg: Config) -> pd.DataFrame:
             start=start,
             end=end,
             seed=int(cfg["seed"]),
+            noise_mm=float(dcfg.get("synthetic_noise_mm", 2.5)),
         )
 
 
@@ -225,7 +226,8 @@ def _synthetic_weather_one(station_id, lat, start, end, seed: int) -> pd.DataFra
     })
 
 
-def _synthetic_displacement(n_stations: int, start, end, seed: int) -> pd.DataFrame:
+def _synthetic_displacement(n_stations: int, start, end, seed: int,
+                            noise_mm: float = 2.5) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
     dates = pd.date_range(start, end, freq="D")
     t_years = (dates - dates[0]).days.to_numpy() / 365.25
@@ -244,6 +246,8 @@ def _synthetic_displacement(n_stations: int, start, end, seed: int) -> pd.DataFr
     base_rate = base_rate.clip(1, None)
 
     common_mode = np.cumsum(rng.normal(0, 0.15, len(dates)))  # regional AR-ish drift
+    dt = float(t_years[1] - t_years[0])
+    n = len(dates)
 
     frames = []
     for i in range(n_stations):
@@ -253,17 +257,36 @@ def _synthetic_displacement(n_stations: int, start, end, seed: int) -> pd.DataFr
         seasonal = seas_amp * (-np.cos(2 * np.pi * (doy - 40) / 365.25)) \
             + 0.4 * seas_amp * np.sin(4 * np.pi * doy / 365.25)
 
-        # 0-2 drought-driven acceleration episodes -> the "critical" windows.
-        extra = np.zeros(len(dates))
-        for _ in range(rng.integers(0, 3)):
-            t0 = rng.uniform(t_years[0] + 0.5, t_years[-1] - 0.5)
-            width = rng.uniform(0.35, 0.9)
-            add_rate = rng.uniform(35, 95)  # mm/yr on top, ramped in
-            ramp = 1.0 / (1.0 + np.exp(-(t_years - t0) / (width / 6)))
-            extra += add_rate * np.cumsum(ramp) * (t_years[1] - t_years[0])
+        # Time-varying extra rate: abrupt-onset acceleration episodes (drought /
+        # over-pumping / roof caving analogue) AND partial recoveries (wet year /
+        # recharge). Onsets are sharp and randomly timed so a trailing 30-day
+        # window often gives little warning of the next 14 days -> genuine
+        # forecasting difficulty rather than a deterministic ramp.
+        extra_rate = np.zeros(n)                       # mm/yr, added on top
+        for _ in range(rng.integers(0, 4)):
+            k0 = rng.integers(int(0.15 * n), int(0.9 * n))
+            onset = rng.uniform(8, 45)                 # days to reach full rate
+            add = rng.uniform(30, 110)
+            ramp = np.clip((np.arange(n) - k0) / onset, 0, 1)
+            hold = rng.uniform(0.3, 1.2)               # years the episode lasts
+            decay = np.clip(1 - (np.arange(n) - k0) * dt / hold, 0, 1) ** 0.5
+            extra_rate += add * ramp * (0.4 + 0.6 * decay)
+        for _ in range(rng.integers(0, 2)):            # recovery episodes
+            k0 = rng.integers(int(0.2 * n), int(0.9 * n))
+            extra_rate -= rng.uniform(10, 40) * np.clip((np.arange(n) - k0) / 30, 0, 1)
 
-        noise = rng.normal(0, 1.4, len(dates))
-        settlement = secular + seasonal + extra + noise + 0.8 * common_mode
+        red = np.zeros(n)                              # AR(1) red measurement noise
+        for k in range(1, n):
+            red[k] = 0.85 * red[k - 1] + rng.normal(0, 1.0)
+        white = rng.normal(0, float(noise_mm), n)
+        steps = np.zeros(n)                            # rare abrupt settlement jumps
+        for _ in range(rng.integers(0, 3)):
+            k0 = rng.integers(0, n)
+            steps[k0:] += rng.uniform(4, 18)
+
+        settlement = (secular + seasonal
+                      + np.cumsum(extra_rate) * dt
+                      + steps + 1.6 * red + white + 0.8 * common_mode)
         settlement -= settlement[0]
 
         frames.append(pd.DataFrame({

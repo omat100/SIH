@@ -58,4 +58,5 @@ def test_pipeline_train_predict(cfg):
     ]
     out = predict(readings, model="gbdt", cfg=cfg)
     assert out["risk_class"] in {"safe", "watch", "critical"}
-    assert abs(sum(out["probabilities"].values()) - 1.0) < 1e-5
+    # probabilities are rounded to 4 dp in the public payload
+    assert abs(sum(out["probabilities"].values()) - 1.0) < 2e-3
