@@ -36,10 +36,17 @@ def add_risk_labels(cfg: Config, samples: pd.DataFrame, save: bool = True) -> pd
     method = lcfg.get("method", "quantile")
     s = samples.copy()
 
+    # Early warning is about DEVIATION from a node's own recent behaviour, not
+    # its absolute subsidence rate (a slow-but-steady station is not an alert).
+    # So score the *excess* forward rate over the trailing (backward-window)
+    # rate, plus forward acceleration, plus excess forward tilt rate.
+    s["fwd_settlement_excess"] = s["fwd_settlement_rate"] - s["distance_rate"]
+    s["fwd_tilt_excess"] = s["fwd_tilt_rate"].abs() - s["tilt_rate"].abs()
+
     hazard = (
-        _robust_z(s["fwd_settlement_rate"])
+        _robust_z(s["fwd_settlement_excess"])
         + _robust_z(s["fwd_settlement_accel"]).clip(lower=0.0)
-        + _robust_z(s["fwd_tilt_rate"].abs())
+        + 0.5 * _robust_z(s["fwd_tilt_excess"])
     )
     s["hazard_score"] = hazard
 

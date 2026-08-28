@@ -20,6 +20,16 @@ from .utils import get_logger
 log = get_logger("minesub.features")
 
 RAW_CHANNELS = ["temp_c", "humidity_pct", "tilt_deg", "distance_mm"]
+# channels detrended per window (subtract first value) before the LSTM sees them
+_DETREND_IDX = [RAW_CHANNELS.index("tilt_deg"), RAW_CHANNELS.index("distance_mm")]
+
+
+def detrend_window(chunk: np.ndarray) -> np.ndarray:
+    """chunk: [seq_len, len(RAW_CHANNELS)] -> copy with distance/tilt made
+    relative to the window's first sample."""
+    out = np.asarray(chunk, dtype=np.float32).copy()
+    out[:, _DETREND_IDX] -= out[0, _DETREND_IDX]
+    return out
 
 
 def _slope_per_day(y: np.ndarray) -> float:
@@ -68,13 +78,24 @@ def _backward_features(win: pd.DataFrame) -> dict[str, float]:
     }
 
 
+def _robust_rate(y: np.ndarray) -> float:
+    """Endpoint-mean slope (mm/day): resistant to daily measurement noise."""
+    n = len(y)
+    if n < 4:
+        return _slope_per_day(y)
+    k = max(2, n // 4)
+    return float((y[-k:].mean() - y[:k].mean()) / (n - k))
+
+
 def _forward_targets(fwd: pd.DataFrame) -> dict[str, float]:
     d = fwd["distance_mm"].to_numpy()
     ti = fwd["tilt_deg"].to_numpy()
+    h = len(d) // 2
     return {
-        "fwd_settlement_rate": _slope_per_day(d),      # mm / day
-        "fwd_settlement_accel": _accel_per_day2(d),    # mm / day^2
-        "fwd_tilt_rate": _slope_per_day(ti),           # deg / day
+        "fwd_settlement_rate": _robust_rate(d),                       # mm / day
+        # acceleration = (2nd-half rate) - (1st-half rate)
+        "fwd_settlement_accel": _robust_rate(d[h:]) - _robust_rate(d[:h]),
+        "fwd_tilt_rate": _robust_rate(ti),                            # deg / day
     }
 
 
@@ -132,8 +153,8 @@ def build_feature_table(cfg: Config, ts: pd.DataFrame | None = None,
 
 
 def feature_columns(samples: pd.DataFrame) -> list[str]:
-    drop = {"station_id", "t", "data_source_disp", "risk_class", "hazard_score",
-            "lat", "lon"}
+    drop = {"station_id", "t", "data_source_disp", "data_source_wx",
+            "risk_class", "hazard_score", "y", "lat", "lon"}
     return [c for c in samples.columns
             if c not in drop and not c.startswith("fwd_")]
 
@@ -145,6 +166,9 @@ def build_sequences(cfg: Config, samples: pd.DataFrame,
     seq_len = int(cfg["model"]["torch"]["seq_len"])
     ts = ts.sort_values(["station_id", "date"])
     by_station = {sid: g.set_index("date") for sid, g in ts.groupby("station_id")}
+    # window-local detrend: distance/tilt carry a huge per-station DC offset and
+    # secular trend that would swamp standardisation — subtract the window's
+    # first value so the LSTM sees the *change* a node reports, like the field.
     arr = np.zeros((len(samples), seq_len, len(RAW_CHANNELS)), dtype=np.float32)
     for i, row in enumerate(samples.itertuples(index=False)):
         g = by_station[row.station_id]
@@ -154,5 +178,5 @@ def build_sequences(cfg: Config, samples: pd.DataFrame,
         if len(chunk) < seq_len:  # left-pad short heads with the first row
             pad = np.repeat(chunk[:1], seq_len - len(chunk), axis=0)
             chunk = np.vstack([pad, chunk])
-        arr[i] = chunk
+        arr[i] = detrend_window(chunk)
     return arr

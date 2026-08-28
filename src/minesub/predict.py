@@ -18,7 +18,7 @@ import pandas as pd
 
 from . import RISK_CLASSES
 from .config import Config, load_config
-from .features import RAW_CHANNELS, backward_window_features
+from .features import RAW_CHANNELS, backward_window_features, detrend_window
 from .utils import get_logger
 
 log = get_logger("minesub.predict")
@@ -72,7 +72,7 @@ def predict(readings, model: str = "gbdt", cfg: Config | None = None,
         chunk = df.iloc[-seq_len:][RAW_CHANNELS].to_numpy(dtype=np.float32)
         if len(chunk) < seq_len:
             chunk = np.vstack([np.repeat(chunk[:1], seq_len - len(chunk), axis=0), chunk])
-        proba = m.predict_proba(chunk[None, ...])[0]
+        proba = m.predict_proba(detrend_window(chunk)[None, ...])[0]
         signals = {}
 
     idx = int(np.argmax(proba))

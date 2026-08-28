@@ -238,16 +238,21 @@ def _synthetic_displacement(n_stations: int, start, end, seed: int,
 
     # Smooth secular subsidence field: a couple of Gaussian "bowls".
     centres = [(36.05, -119.9), (36.6, -120.1)]
-    base_rate = np.full(n_stations, 6.0)  # mm/yr background
+    base_rate = np.full(n_stations, 5.0)  # mm/yr background
     for clat, clon in centres:
         d2 = (lats - clat) ** 2 + ((lons - clon) * 0.8) ** 2
-        base_rate += rng.uniform(70, 120) * np.exp(-d2 / (2 * 0.25**2))
-    base_rate += rng.normal(0, 4, n_stations)
+        base_rate += rng.uniform(35, 60) * np.exp(-d2 / (2 * 0.25**2))
+    base_rate += rng.normal(0, 3, n_stations)
     base_rate = base_rate.clip(1, None)
 
     common_mode = np.cumsum(rng.normal(0, 0.15, len(dates)))  # regional AR-ish drift
     dt = float(t_years[1] - t_years[0])
     n = len(dates)
+    # seasonal "wetness" (0..1): acceleration episodes are more likely to start a
+    # few weeks after wet spells -> a genuine but noisy leading indicator that
+    # the models can partly learn from the humidity / seasonal features.
+    wetness = 0.5 + 0.5 * (-np.cos(2 * np.pi * (doy - 40) / 365.25))
+    onset_bias = wetness / wetness.sum()
 
     frames = []
     for i in range(n_stations):
@@ -262,18 +267,31 @@ def _synthetic_displacement(n_stations: int, start, end, seed: int,
         # recharge). Onsets are sharp and randomly timed so a trailing 30-day
         # window often gives little warning of the next 14 days -> genuine
         # forecasting difficulty rather than a deterministic ramp.
+        idx = np.arange(n)
         extra_rate = np.zeros(n)                       # mm/yr, added on top
-        for _ in range(rng.integers(0, 4)):
-            k0 = rng.integers(int(0.15 * n), int(0.9 * n))
-            onset = rng.uniform(8, 45)                 # days to reach full rate
-            add = rng.uniform(30, 110)
-            ramp = np.clip((np.arange(n) - k0) / onset, 0, 1)
-            hold = rng.uniform(0.3, 1.2)               # years the episode lasts
-            decay = np.clip(1 - (np.arange(n) - k0) * dt / hold, 0, 1) ** 0.5
-            extra_rate += add * ramp * (0.4 + 0.6 * decay)
+        # wet-spell-linked episodes: a short accelerating-creep precursor (a real
+        # early-warning signal) followed by a sharper main onset ~2-3 weeks after
+        # a wet period. The precursor is partly visible in a trailing window ->
+        # legitimately learnable; noise + the random onsets below keep it hard.
+        for _ in range(rng.integers(1, 5)):
+            k0 = int(rng.choice(n, p=onset_bias))
+            k0 = min(n - 1, k0 + int(rng.uniform(10, 24)))  # lag after the wet spell
+            add = rng.uniform(45, 150)
+            hold = rng.uniform(0.25, 1.0)
+            pre = int(rng.uniform(14, 32))                   # precursor length (days)
+            precursor = np.clip((idx - (k0 - pre)) / pre, 0, 1) ** 1.6 * (idx < k0)
+            main = np.clip((idx - k0) / rng.uniform(4, 12), 0, 1)
+            decay = np.clip(1 - (idx - k0) * dt / hold, 0, 1) ** 0.5
+            extra_rate += add * (0.45 * precursor + main * (0.35 + 0.65 * decay))
+        # a few purely random abrupt onsets -> irreducible forecast error
+        for _ in range(rng.integers(0, 3)):
+            k0 = rng.integers(int(0.1 * n), n - 1)
+            ramp = np.clip((idx - k0) / rng.uniform(1, 4), 0, 1)
+            extra_rate += rng.uniform(30, 90) * ramp * np.clip(
+                1 - (idx - k0) * dt / rng.uniform(0.15, 0.5), 0, 1)
         for _ in range(rng.integers(0, 2)):            # recovery episodes
-            k0 = rng.integers(int(0.2 * n), int(0.9 * n))
-            extra_rate -= rng.uniform(10, 40) * np.clip((np.arange(n) - k0) / 30, 0, 1)
+            k0 = rng.integers(int(0.2 * n), n - 1)
+            extra_rate -= rng.uniform(10, 40) * np.clip((idx - k0) / 30, 0, 1)
 
         red = np.zeros(n)                              # AR(1) red measurement noise
         for k in range(1, n):

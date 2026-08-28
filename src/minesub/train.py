@@ -28,6 +28,15 @@ def train(cfg: Config, model_name: str) -> dict:
     set_seed(int(cfg["seed"]))
     cfg.ensure_dirs()
     samples, ts = _load_inputs(cfg)
+
+    synthetic = bool((samples["data_source_disp"] == "synthetic_fallback").all())
+    if synthetic:
+        log.warning("=" * 70)
+        log.warning("Training on the SYNTHETIC surrogate (CA DWR feed not used).")
+        log.warning("Metrics below exercise the pipeline; they are NOT a benchmark.")
+        log.warning("Connect the real CA DWR feed for a meaningful evaluation.")
+        log.warning("=" * 70)
+
     tr, va, te = temporal_split(cfg, samples)
     y = samples["y"].to_numpy()
     reports = cfg.paths["reports"]
@@ -58,5 +67,6 @@ def train(cfg: Config, model_name: str) -> dict:
         model.save(models_dir / _MODEL_FILES["torch"])
         extra = {"device": model.device, "seq_len": int(cfg["model"]["torch"]["seq_len"])}
 
+    extra["synthetic_data"] = synthetic
     metrics = evaluate_predictions(y[te], proba, reports, prefix=model_name, extra=extra)
     return metrics

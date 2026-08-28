@@ -28,7 +28,7 @@ data:
   # real forecasting problem; it is NOT a substitute for the CA DWR feed.
   allow_synthetic_fallback: true
   synthetic_n_stations: 45
-  synthetic_noise_mm: 2.5
+  synthetic_noise_mm: 1.8
 
 tilt:
   # Tilt is derived from the spatial gradient of settlement: for each station we
@@ -40,7 +40,7 @@ tilt:
 
 features:
   backward_window_days: 30      # features look back over this window (ending at t)
-  forward_horizon_days: 14      # label describes deformation over [t, t+horizon]
+  forward_horizon_days: 21      # label describes deformation over [t, t+horizon]
   min_periods: 12               # min daily samples required inside a window
   step_days: 7                  # stride between consecutive windowed samples
 
