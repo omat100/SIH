@@ -1,0 +1,79 @@
+# ---------------------------------------------------------------------------
+# Mine-subsidence early-warning pipeline configuration
+# ---------------------------------------------------------------------------
+seed: 42
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  models: artifacts/models
+  reports: reports
+
+data:
+  # Backbone: CA DWR "Ground Surface Displacement / Land Subsidence Monitoring"
+  # served from the data.ca.gov CKAN instance. The downloader lists the CSV
+  # resources on this dataset and normalises whatever schema it finds.
+  ca_dwr:
+    ckan_base: "https://data.ca.gov/api/3/action"
+    dataset_id: "wdl-ground-surface-displacement-land-subsidence-monitoring"
+  weather:
+    provider: meteostat        # falls back to a seasonal model if unavailable
+  min_date: "2016-01-01"
+  max_date: "2023-12-31"
+  # If the network is unreachable or the remote schema is unrecognised, emit a
+  # clearly-labelled physical surrogate with the SAME normalised schema so the
+  # whole pipeline still runs. Rows carry data_source = "synthetic_fallback".
+  allow_synthetic_fallback: true
+  synthetic_n_stations: 45
+
+tilt:
+  # Tilt is derived from the spatial gradient of settlement: for each station we
+  # take its nearest neighbour within max_neighbor_distance_m and compute
+  # tilt = arctan(delta_settlement / horizontal_baseline).
+  max_neighbor_distance_m: 25000
+  fallback_baseline_m: 1000
+
+features:
+  backward_window_days: 30      # features look back over this window (ending at t)
+  forward_horizon_days: 14      # label describes deformation over [t, t+horizon]
+  min_periods: 12               # min daily samples required inside a window
+  step_days: 7                  # stride between consecutive windowed samples
+
+labels:
+  # method: "quantile" -> data-driven 3-class split of a composite hazard score
+  #                       (guarantees a trainable problem on any input).
+  # method: "absolute" -> fixed geotechnical thresholds (use this in the field).
+  method: quantile
+  quantile_watch: 0.60
+  quantile_critical: 0.90
+  absolute:
+    settlement_rate_mm_day: { watch: 2.0, critical: 10.0 }
+    tilt_rate_deg_day:      { watch: 0.02, critical: 0.10 }
+    settlement_accel_mm_day2_critical: 0.5
+
+split:
+  method: temporal             # earlier windows train, later windows test
+  val_fraction: 0.15
+  test_fraction: 0.20
+
+model:
+  lgbm:
+    n_estimators: 800
+    learning_rate: 0.03
+    num_leaves: 31
+    max_depth: -1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_samples: 40
+    early_stopping_rounds: 60
+  torch:
+    seq_len: 30                 # raw daily channels fed to the LSTM
+    hidden_size: 64
+    num_layers: 2
+    dropout: 0.2
+    lr: 0.001
+    weight_decay: 0.0001
+    batch_size: 128
+    max_epochs: 80
+    patience: 10

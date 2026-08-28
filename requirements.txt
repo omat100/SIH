@@ -1,0 +1,12 @@
+numpy>=1.26,<2.2
+pandas>=2.1
+pyarrow>=15
+scikit-learn>=1.4
+lightgbm>=4.3
+torch>=2.2
+requests>=2.31
+meteostat>=1.6
+PyYAML>=6.0
+matplotlib>=3.8
+tqdm>=4.66
+joblib>=1.3
