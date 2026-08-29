@@ -21,8 +21,8 @@ data:
     provider: open-meteo       # real temp/humidity/rain at each station's coords
                                # (Open-Meteo archive/ERA5, no key); falls back to
                                # meteostat, then a seasonal model
-  min_date: "2016-01-01"
-  max_date: "2023-12-31"
+  min_date: "1992-01-01"
+  max_date: "2026-08-23"
   # If the network is unreachable or the remote schema is unrecognised, emit a
   # clearly-labelled physical surrogate with the SAME normalised schema so the
   # whole pipeline still runs. Rows carry data_source = "synthetic_fallback".
