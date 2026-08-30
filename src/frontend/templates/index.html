@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 ML Dashboard</title>
+    <!-- Import Socket.IO library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .data-box {
+            font-size: 24px;
+            font-weight: bold;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Real-Time ML Predictions</h1>
+    <p>Waiting for data from ESP32...</p>
+
+    <!-- Changed from a div to a standard HTML table -->
+    <table id="data-table">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Prediction Result</th>
+            </tr>
+        </thead>
+        <!-- We will inject new rows into this tbody -->
+        <tbody id="table-body">
+            <!-- Data goes here -->
+        </tbody>
+    </table>
+
+    <script>
+        const socket = io.connect('http://localhost:8085');
+
+        socket.on('connect', function () {
+            console.log('Connected to Python Server!');
+        });
+
+        // Listen for events from Python
+        socket.on('connection', function (msg) {
+            const tableBody = document.getElementById('table-body');
+
+            // 1. Create a new table row (<tr>)
+            const newRow = document.createElement('tr');
+
+            // 2. Create the cells (<td>) for time and data
+            const timeCell = document.createElement('td');
+            timeCell.innerText = new Date().toLocaleTimeString(); // Adds a local timestamp
+
+            const dataCell = document.createElement('td');
+            dataCell.innerText = msg.result;
+
+            // 3. Attach the cells to the row
+            newRow.appendChild(timeCell);
+            newRow.appendChild(dataCell);
+
+            // 4. Add the row to the top of the table (use .appendChild() to add to the bottom)
+            tableBody.prepend(newRow);
+        });
+    </script>
+
+    <!-- Adding some basic table styling -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            text-align: center;
+        }
+
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 50%;
+        }
+
+        th,
+        td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+
+</body>
+
+</html>
