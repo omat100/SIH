@@ -17,6 +17,16 @@ import pandas as pd
 from .config import Config
 from .utils import get_logger
 
+# detrend_window() - Returns a copy of the sensor window with tilt and distance values made relative to the first reading.
+# _slope_per_day() - Returns the linear rate of change of the given values per day.
+# _accel_per_day2() - Returns the acceleration, or change in rate, of the given values per day squared.
+# _backward_features() - Returns a dictionary of features summarising the past sensor observation window.
+# _robust_rate() - Returns a noise-resistant rate of change calculated using the averages at the beginning and end of the data.
+# _forward_targets() - Returns future settlement and tilt rates used to create prediction labels, not model input features.
+# build_feature_table() - Returns a table of training samples containing past-window features and future prediction targets.
+# feature_columns() - Returns a list of column names that should be used as input features for the model.
+# build_sequences() - Returns NumPy arrays containing fixed-length sensor sequences for each training sample, used by the PyTorch model.
+
 log = get_logger("minesub.features")
 
 RAW_CHANNELS = ["temp_c", "humidity_pct", "tilt_deg", "distance_mm"]
@@ -37,6 +47,8 @@ def _slope_per_day(y: np.ndarray) -> float:
     if n < 2:
         return 0.0
     x = np.arange(n, dtype=float)
+    # mx + c
+    # 0th index matlab m
     return float(np.polyfit(x, y, 1)[0])
 
 
@@ -45,9 +57,11 @@ def _accel_per_day2(y: np.ndarray) -> float:
     if n < 3:
         return 0.0
     x = np.arange(n, dtype=float)
+    # 2 degree -> ax^2 + bx + c
+    # 0th index matlab 0
     return float(2.0 * np.polyfit(x, y, 2)[0])
 
-
+# It takes the past observation window and converts it into useful numerical features.
 def _backward_features(win: pd.DataFrame) -> dict[str, float]:
     d = win["distance_mm"].to_numpy()
     ti = win["tilt_deg"].to_numpy()
