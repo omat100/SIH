@@ -12,7 +12,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "config.yaml"
 
-
+# dataclass is just like a constructor basically the first 2 lines
 @dataclass
 class Config:
     raw: dict[str, Any]
@@ -41,7 +41,7 @@ class Config:
         for p in self.paths.values():
             p.mkdir(parents=True, exist_ok=True)
 
-
+# The main kind of function just chooses the yaml file
 def load_config(path: str | os.PathLike[str] | None = None) -> Config:
     cfg_path = Path(path) if path else DEFAULT_CONFIG_PATH
     with open(cfg_path, "r", encoding="utf-8") as fh:
