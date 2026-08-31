@@ -9,6 +9,10 @@ Output schema (one row per station per day):
                                     # increasing distance => ground dropping)
     data_source_disp, data_source_wx
 """
+### not my work
+# _resample_daily() - Returns daily settlement data for each station by interpolating sparse displacement readings.
+# _derive_tilt() - Returns the daily dataset with a calculated tilt_deg value based on settlement differences between neighbouring stations.
+# build_timeseries() - Returns the complete per-station daily timeseries by combining displacement, derived tilt, and weather data; optionally saves it as a Parquet file.
 from __future__ import annotations
 
 import numpy as np
