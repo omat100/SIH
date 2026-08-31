@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "minesub"
 version = "0.1.0"
 description = "Sensor-based mine-subsidence early-warning: CA DWR hybrid dataset + risk classifiers"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26,<2.2",
     "pandas>=2.1",

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analytics - Subside Sentinel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-background": "#dae2fd",
+                      "primary-fixed": "#d8e2ff",
+                      "error": "#ffb4ab",
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "surface-variant": "#2d3449",
+                      "on-surface": "#dae2fd",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-secondary-fixed": "#002113",
+                      "tertiary-fixed": "#ffdadb",
+                      "inverse-on-surface": "#283044",
+                      "tertiary": "#ffb2b7",
+                      "on-tertiary-container": "#5b0017",
+                      "error-container": "#93000a",
+                      "background": "#0b1326",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "surface-tint": "#adc6ff",
+                      "secondary": "#4edea3",
+                      "surface-container-lowest": "#060e20",
+                      "surface-container-high": "#222a3d",
+                      "outline-variant": "#424754",
+                      "on-tertiary-fixed": "#40000d",
+                      "on-primary-fixed-variant": "#004395",
+                      "surface-container-highest": "#2d3449",
+                      "on-primary-fixed": "#001a42",
+                      "on-surface-variant": "#c2c6d6",
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-container-low": "#131b2e",
+                      "on-secondary": "#003824",
+                      "on-primary": "#002e6a",
+                      "outline": "#8c909f",
+                      "on-error-container": "#ffdad6",
+                      "primary": "#adc6ff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "surface-container": "#171f33",
+                      "surface-dim": "#0b1326",
+                      "on-error": "#690005",
+                      "secondary-container": "#00a572",
+                      "on-tertiary": "#67001b",
+                      "inverse-surface": "#dae2fd",
+                      "inverse-primary": "#005ac2",
+                      "on-primary-container": "#00285d",
+                      "on-secondary-container": "#00311f",
+                      "primary-container": "#4d8eff",
+                      "surface": "#0b1326",
+                      "primary-fixed-dim": "#adc6ff",
+                      "surface-bright": "#31394d",
+                      "tertiary-container": "#ff516a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "unit": "4px",
+                      "gutter": "24px",
+                      "container-padding": "32px",
+                      "section-margin": "48px",
+                      "card-gap": "16px"
+              },
+              "fontFamily": {
+                      "headline-lg": [
+                              "Geist"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "mono-data": [
+                              "Geist"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Geist"
+                      ],
+                      "display-lg": [
+                              "Geist"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-lg": [
+                              "Geist"
+                      ],
+                      "headline-sm": [
+                              "Geist"
+                      ],
+                      "headline-md": [
+                              "Geist"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "mono-data": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { background-color: #020617; } /* Level 0 Canvas */
+        .glass-panel {
+            background-color: #0F172A;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .btn-primary {
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(173, 198, 255, 0.5);
+        }
+        .chart-line { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw 2s ease-out forwards; }
+        @keyframes draw { to { stroke-dashoffset: 0; } }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex bg-surface-container dark:bg-surface-container fixed left-0 top-0 h-full w-[280px] z-40 border-r border-white/5 flex flex-col py-section-margin gap-unit transition-all duration-300 ease-in-out">
+<div class="px-gutter mb-8">
+<h1 class="font-headline-sm text-headline-sm text-on-surface">Mining Ops</h1>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">Sector 7G - Active Monitoring</p>
+</div>
+<div class="flex-1 flex flex-col gap-1 px-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Overview
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined">sensors</span>
+                Real-time Feed
+            </a>
+<!-- Active Tab: Analytics -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary border-r-2 border-primary bg-primary/10 font-bold font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+                Analytics
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined">settings_input_component</span>
+                Model Tuning
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined">terminal</span>
+                System Logs
+            </a>
+</div>
+<div class="px-4 mt-auto mb-4">
+<button class="w-full bg-primary text-on-primary py-3 rounded-lg font-label-lg text-label-lg btn-primary hover:bg-primary-fixed-dim transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Analysis
+            </button>
+</div>
+<div class="flex flex-col gap-1 px-4 border-t border-white/5 pt-4">
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined text-[18px]">contact_support</span>
+                Support
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-[280px] flex flex-col h-full relative">
+<!-- TopAppBar -->
+<header class="bg-surface/80 dark:bg-surface/80 backdrop-blur-xl fixed top-0 w-full md:w-[calc(100%-280px)] z-50 border-b border-white/10 shadow-2xl flex justify-between items-center px-gutter h-16 transition-all">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary tracking-tight md:hidden">Subside Sentinel</span>
+<div class="hidden md:flex items-center bg-surface-container-high rounded-full px-4 py-1.5 border border-white/5 focus-within:border-primary/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm font-body-sm text-on-surface placeholder:text-on-surface-variant/50 w-64 ml-2" placeholder="Search analytics..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2 text-on-surface-variant">
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors cursor-pointer active:scale-95 duration-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors cursor-pointer active:scale-95 duration-200 hidden md:block">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors cursor-pointer active:scale-95 duration-200 hidden md:block">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<button class="bg-error/10 border border-error/20 text-error px-4 py-1.5 rounded-md font-label-md text-label-md hover:bg-error/20 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+<span class="hidden sm:inline">Emergency Shutdown</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-variant overflow-hidden border border-white/10 ml-2">
+<img class="w-full h-full object-cover" data-alt="A futuristic, high-tech abstract portrait serving as a user profile avatar. Rendered in dark mode aesthetics with deep indigos and glowing cyan highlights. Sharp geometric features and soft neon lighting suggest advanced technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNHJJfP4n9TY-qxZzARSoX1ihv3UX-3qA7OQBGmYDeCFfaGCtodH1zl3zLECqFHbspMkpUA4Mjtkr4HwoeFO-RwtFxQ_d523t9cyvZ_vhS-3hDenccC7h8K1_Ix9fMM1zdtOWlq-LneYnjo_gK6aYSIAjnr75-K8uvGEOXeZksCha46nZlrKLxk_nA_VKkiyq5h7_b_VvnMEyKPa9UZS2qzgXJV9odzAbHlcwSAgHoGQSKwJVzp78v"/>
+</div>
+</div>
+</header>
+<!-- Scrollable Canvas -->
+<div class="flex-1 overflow-y-auto pt-24 pb-section-margin px-4 sm:px-gutter lg:px-container-padding">
+<!-- Page Header & Controls -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-2">Analytics</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Comprehensive subsidence modeling and historical trends.</p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<div class="flex items-center bg-surface-container rounded-md p-1 border border-white/5">
+<button class="px-3 py-1.5 rounded bg-surface-variant text-on-surface font-label-md text-label-md shadow-sm">1D</button>
+<button class="px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">1W</button>
+<button class="px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">1M</button>
+<button class="px-3 py-1.5 rounded text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">YTD</button>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-md border border-white/10 text-on-surface hover:bg-white/5 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">calendar_month</span>
+                        Custom Range
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-md bg-secondary/10 text-secondary border border-secondary/20 hover:bg-secondary/20 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                        Export Data
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-card-gap">
+<!-- Main Trend Chart (Spans 8 cols) -->
+<div class="lg:col-span-8 glass-panel rounded-xl p-6 flex flex-col">
+<div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Deformation Trends</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Vertical displacement over selected period</p>
+</div>
+<div class="flex gap-2">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-secondary/10 text-secondary font-label-md text-label-md border border-secondary/20">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Sensor A1
+                            </span>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary/10 text-primary font-label-md text-label-md border border-primary/20">
+<span class="w-2 h-2 rounded-full bg-primary"></span> Sensor B2
+                            </span>
+</div>
+</div>
+<div class="flex-1 relative min-h-[300px] w-full">
+<!-- Simulated Chart Grid -->
+<div class="absolute inset-0 flex flex-col justify-between">
+<div class="w-full h-px bg-white/5 relative"><span class="absolute -left-8 top-[-10px] text-[10px] text-on-surface-variant font-mono-data">0mm</span></div>
+<div class="w-full h-px bg-white/5 border-b border-dashed border-error/30 relative"><span class="absolute -left-8 top-[-10px] text-[10px] text-error font-mono-data">-5mm</span></div>
+<div class="w-full h-px bg-white/5 relative"><span class="absolute -left-10 top-[-10px] text-[10px] text-on-surface-variant font-mono-data">-10mm</span></div>
+<div class="w-full h-px bg-white/5 relative"><span class="absolute -left-10 top-[-10px] text-[10px] text-on-surface-variant font-mono-data">-15mm</span></div>
+</div>
+<!-- Simulated Chart Lines using SVG -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 300">
+<!-- Gradient Fills -->
+<defs>
+<lineargradient id="grad-sec" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#4edea3" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#4edea3" stop-opacity="0"></stop>
+</lineargradient>
+<lineargradient id="grad-pri" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#adc6ff" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#adc6ff" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Sensor A1 Line (Secondary) -->
+<path d="M0,50 Q100,60 200,40 T400,80 T600,150 T800,120 T1000,180 L1000,300 L0,300 Z" fill="url(#grad-sec)"></path>
+<path class="chart-line" d="M0,50 Q100,60 200,40 T400,80 T600,150 T800,120 T1000,180" fill="none" stroke="#4edea3" stroke-width="2"></path>
+<!-- Sensor B2 Line (Primary) -->
+<path d="M0,100 Q150,110 300,90 T500,140 T700,220 T900,200 T1000,250 L1000,300 L0,300 Z" fill="url(#grad-pri)"></path>
+<path class="chart-line" d="M0,100 Q150,110 300,90 T500,140 T700,220 T900,200 T1000,250" fill="none" stroke="#adc6ff" stroke-width="2"></path>
+<!-- Active Data Point Indicator -->
+<circle cx="700" cy="220" fill="#020617" r="4" stroke="#adc6ff" stroke-width="2"></circle>
+<line opacity="0.5" stroke="#adc6ff" stroke-dasharray="4,4" stroke-width="1" x1="700" x2="700" y1="0" y2="300"></line>
+</svg>
+<!-- Tooltip -->
+<div class="absolute left-[710px] top-[180px] bg-surface-container-high border border-white/10 rounded p-2 shadow-lg z-10">
+<p class="font-mono-data text-[10px] text-on-surface-variant mb-1">2023-10-27 14:00</p>
+<p class="font-mono-data text-[12px] text-primary"><span class="text-on-surface">B2:</span> -11.4mm</p>
+<p class="font-mono-data text-[12px] text-error mt-0.5">Threshold Exceeded</p>
+</div>
+</div>
+<!-- X-Axis Labels -->
+<div class="flex justify-between mt-4 text-[10px] font-mono-data text-on-surface-variant px-2">
+<span>Oct 23</span>
+<span>Oct 24</span>
+<span>Oct 25</span>
+<span>Oct 26</span>
+<span>Oct 27</span>
+<span>Oct 28</span>
+<span>Oct 29</span>
+</div>
+</div>
+<!-- Risk Zones Heatmap (Spans 4 cols) -->
+<div class="lg:col-span-4 glass-panel rounded-xl p-6 flex flex-col">
+<div class="border-b border-white/5 pb-4 mb-4">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Subsidence Risk Map</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Sector 7G Topology overlay</p>
+</div>
+<div class="flex-1 rounded-lg overflow-hidden relative border border-white/10 bg-surface-container-lowest min-h-[250px]">
+<!-- Using background pattern/gradient to simulate a heatmap over terrain -->
+<div class="absolute inset-0 bg-[url('placeholder')] bg-cover bg-center opacity-30 mix-blend-luminosity" data-alt="A top-down satellite view of a mining site terrain, rendered in dark, monochromatic technical blues. The topography is detailed with contour lines and subtle elevations, fitting a high-tech dashboard aesthetic."></div>
+<!-- Simulated Heatmap Blobs -->
+<div class="absolute top-[20%] left-[30%] w-24 h-24 bg-tertiary-container/40 rounded-full blur-xl"></div>
+<div class="absolute top-[25%] left-[35%] w-12 h-12 bg-error/60 rounded-full blur-md"></div>
+<div class="absolute bottom-[20%] right-[20%] w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
+<!-- Map Grid Overlay -->
+<div class="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+<!-- High Risk Marker -->
+<div class="absolute top-[28%] left-[38%] flex items-center justify-center">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-40"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-error"></span>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between font-label-md text-label-md">
+<span class="text-on-surface-variant">Stable</span>
+<div class="flex-1 mx-4 h-1.5 rounded-full bg-gradient-to-r from-secondary/50 via-primary/50 to-error/80"></div>
+<span class="text-error">Critical</span>
+</div>
+</div>
+<!-- Key Metrics & Model Summary Row -->
+<!-- Metric 1 -->
+<div class="lg:col-span-3 glass-panel rounded-xl p-5 flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary text-[24px]">speed</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-label-md bg-secondary/10 text-secondary border border-secondary/20">+2.4%</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant mb-1">Max Deformation Rate</p>
+<p class="font-display-lg text-[32px] font-bold text-on-surface text-glow">1.2 <span class="text-[16px] text-on-surface-variant font-normal">mm/day</span></p>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="lg:col-span-3 glass-panel rounded-xl p-5 flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-error text-[24px]">warning</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-label-md bg-error/10 text-error border border-error/20">Critical</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant mb-1">Active Alerts</p>
+<p class="font-display-lg text-[32px] font-bold text-on-surface">03</p>
+</div>
+</div>
+<!-- Model Performance (Spans 6 cols) -->
+<div class="lg:col-span-6 glass-panel rounded-xl p-5">
+<div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+<h3 class="font-headline-sm text-[16px] text-on-surface">Predictive Model Diagnostics</h3>
+<span class="px-2 py-1 rounded text-[10px] font-label-md bg-primary/10 text-primary border border-primary/20">v2.4.1 (Stable)</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<div class="flex justify-between text-[12px] font-mono-data text-on-surface-variant mb-1">
+<span>Prediction Accuracy</span>
+<span class="text-secondary">94.2%</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 94.2%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[12px] font-mono-data text-on-surface-variant mb-1">
+<span>False Positive Rate</span>
+<span class="text-primary">1.8%</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 1.8%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[12px] font-mono-data text-on-surface-variant mb-1">
+<span>Data Ingestion Latency</span>
+<span class="text-on-surface">45ms</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-on-surface-variant h-full rounded-full" style="width: 15%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[12px] font-mono-data text-on-surface-variant mb-1">
+<span>Compute Load</span>
+<span class="text-tertiary-container">82%</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-tertiary-container h-full rounded-full" style="width: 82%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

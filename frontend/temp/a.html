@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mine Subsidence Early Warning</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error": "#ffb4ab",
+                      "on-primary-fixed": "#001a42",
+                      "on-primary-container": "#00285d",
+                      "surface-dim": "#0b1326",
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "surface-bright": "#31394d",
+                      "on-surface": "#dae2fd",
+                      "surface-container-low": "#131b2e",
+                      "on-secondary": "#003824",
+                      "secondary-container": "#00a572",
+                      "on-error-container": "#ffdad6",
+                      "on-tertiary": "#67001b",
+                      "on-error": "#690005",
+                      "background": "#0b1326",
+                      "tertiary-container": "#ff516a",
+                      "on-tertiary-fixed": "#40000d",
+                      "on-primary-fixed-variant": "#004395",
+                      "surface-container-lowest": "#060e20",
+                      "surface-variant": "#2d3449",
+                      "outline-variant": "#424754",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-secondary-fixed-variant": "#005236",
+                      "on-primary": "#002e6a",
+                      "primary-container": "#4d8eff",
+                      "primary-fixed-dim": "#adc6ff",
+                      "surface-container": "#171f33",
+                      "on-secondary-container": "#00311f",
+                      "inverse-surface": "#dae2fd",
+                      "on-secondary-fixed": "#002113",
+                      "primary-fixed": "#d8e2ff",
+                      "error-container": "#93000a",
+                      "surface-container-highest": "#2d3449",
+                      "surface-container-high": "#222a3d",
+                      "inverse-on-surface": "#283044",
+                      "surface-tint": "#adc6ff",
+                      "outline": "#8c909f",
+                      "inverse-primary": "#005ac2",
+                      "secondary-fixed": "#6ffbbe",
+                      "on-background": "#dae2fd",
+                      "primary": "#adc6ff",
+                      "secondary": "#4edea3",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "on-tertiary-container": "#5b0017",
+                      "tertiary-fixed": "#ffdadb",
+                      "surface": "#0b1326",
+                      "on-surface-variant": "#c2c6d6",
+                      "tertiary": "#ffb2b7"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "card-gap": "16px",
+                      "unit": "4px",
+                      "container-padding": "32px",
+                      "gutter": "24px",
+                      "section-margin": "48px"
+              },
+              "fontFamily": {
+                      "label-lg": ["Geist"],
+                      "body-sm": ["Inter"],
+                      "label-md": ["Geist"],
+                      "display-lg": ["Geist"],
+                      "mono-data": ["Geist"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-sm": ["Geist"],
+                      "headline-md": ["Geist"],
+                      "headline-lg": ["Geist"]
+              },
+              "fontSize": {
+                      "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.04em", "fontWeight": "700"}],
+                      "mono-data": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "500"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "400"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "letterSpacing": "0em", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { background-color: #020617; }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .form-input-dark {
+            background-color: #020617;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #dae2fd;
+        }
+        .form-input-dark:focus {
+            border-color: #adc6ff;
+            box-shadow: 0 0 0 1px rgba(173, 198, 255, 0.5);
+            outline: none;
+        }
+    </style>
+</head>
+<body class="text-on-background font-body-md antialiased min-h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-6 px-4 fixed left-0 top-0 w-[280px] bg-surface-container-low dark:bg-surface-container-low border-r border-outline-variant dark:border-outline-variant z-40">
+<div class="mb-8 px-4 flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sensors</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-semibold text-secondary-fixed-dim">Subsidence Control</h1>
+<p class="font-label-md text-label-md text-on-surface-variant">Vigilant Monitoring</p>
+</div>
+</div>
+<ul class="flex flex-col gap-2 flex-grow">
+<li>
+<a class="text-on-surface-variant dark:text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant dark:hover:bg-surface-variant hover:text-on-surface rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-lg text-label-lg">Overview</span>
+</a>
+</li>
+<li>
+<a class="text-on-surface-variant dark:text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant dark:hover:bg-surface-variant hover:text-on-surface rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">dynamic_feed</span>
+<span class="font-label-lg text-label-lg">Real-time Feed</span>
+</a>
+</li>
+<li>
+<a class="text-on-surface-variant dark:text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant dark:hover:bg-surface-variant hover:text-on-surface rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-lg text-label-lg">Analytics</span>
+</a>
+</li>
+<li>
+<a class="bg-secondary-container dark:bg-secondary-container text-on-secondary-container dark:text-on-secondary-container flex items-center gap-3 px-4 py-3 rounded-lg font-bold transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">precision_manufacturing</span>
+<span class="font-label-lg text-label-lg">Model Tuning</span>
+</a>
+</li>
+<li>
+<a class="text-on-surface-variant dark:text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant dark:hover:bg-surface-variant hover:text-on-surface rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<span class="font-label-lg text-label-lg">System Logs</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto flex flex-col gap-2 pt-4 border-t border-outline-variant">
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant hover:text-on-surface rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-lg text-label-lg">Support</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant hover:text-on-surface rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-error">warning</span>
+<span class="font-label-lg text-label-lg">Alert Status</span>
+</a>
+<button class="mt-4 w-full bg-primary text-on-primary py-3 px-4 rounded-lg font-label-lg text-label-lg hover:opacity-90 transition-opacity shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
+                Run Prediction
+            </button>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 ml-0 md:ml-[280px] h-screen overflow-y-auto bg-background p-container-padding flex flex-col">
+<!-- Header / Status Bar -->
+<header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface">Mine Subsidence Early Warning</h2>
+</div>
+<div class="flex gap-3 bg-surface-container-low px-4 py-2 rounded-full border border-outline-variant">
+<span class="font-mono-data text-mono-data text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span> Model: GBDT
+                </span>
+<span class="text-outline-variant">|</span>
+<span class="font-mono-data text-mono-data text-on-surface-variant">Torch: 2.1.0</span>
+</div>
+</header>
+<!-- Inference Canvas -->
+<div class="max-w-4xl w-full mx-auto glass-panel rounded-xl p-8 shadow-2xl relative overflow-hidden">
+<!-- Subtle background glow -->
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary-container rounded-full blur-[100px] opacity-20 pointer-events-none"></div>
+<div class="flex items-center justify-between border-b border-outline-variant pb-6 mb-8 relative z-10">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">memory</span>
+                    Run Inference
+                </h3>
+</div>
+<div class="space-y-8 relative z-10">
+<!-- Model Selection -->
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Active Model</label>
+<div class="relative">
+<select class="w-full form-input-dark rounded-lg py-3 pl-4 pr-10 appearance-none font-body-md transition-all">
+<option value="gbdt">GBDT (HistGradientBoosting)</option>
+<option value="rf">Random Forest (Experimental)</option>
+<option value="nn">Neural Network (Torch)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Add Readings Section -->
+<div class="bg-surface-container rounded-lg border border-outline-variant p-6">
+<div class="flex justify-between items-center mb-6 border-b border-outline-variant pb-4">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Sensor Readings</h4>
+<div class="bg-primary/10 text-primary px-3 py-1 rounded-full font-mono-data text-mono-data border border-primary/20 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">database</span>
+                            Readings: 0 / 30
+                        </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase tracking-wider text-[10px]">Date</label>
+<div class="relative">
+<input class="w-full form-input-dark rounded-lg py-2 px-3 text-sm focus:ring-1 focus:ring-primary" type="date" value="2026-02-08"/>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">calendar_month</span>
+</div>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase tracking-wider text-[10px]">Temp (°C)</label>
+<input class="w-full form-input-dark rounded-lg py-2 px-3 text-sm" placeholder="Temp (°C)" type="number"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase tracking-wider text-[10px]">Humidity (%)</label>
+<input class="w-full form-input-dark rounded-lg py-2 px-3 text-sm" placeholder="Humidity (%)" type="number"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase tracking-wider text-[10px]">Tilt (deg)</label>
+<input class="w-full form-input-dark rounded-lg py-2 px-3 text-sm" placeholder="Tilt (deg)" type="number"/>
+</div>
+</div>
+<div class="flex gap-4 items-end">
+<div class="flex-1">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2 uppercase tracking-wider text-[10px]">Distance (mm)</label>
+<input class="w-full form-input-dark rounded-lg py-2 px-3 text-sm" placeholder="Distance (mm)" type="number"/>
+</div>
+<button class="bg-surface-variant hover:bg-surface-bright text-on-surface border border-outline-variant py-2 px-6 rounded-lg font-label-lg text-label-lg transition-colors flex items-center gap-2 h-[40px]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Add Reading
+                        </button>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-4 pt-6 border-t border-outline-variant">
+<button class="bg-primary text-on-primary py-3 px-8 rounded-lg font-label-lg text-label-lg hover:opacity-90 transition-opacity shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] flex items-center gap-2">
+<span class="material-symbols-outlined">play_arrow</span>
+                        Run Prediction
+                    </button>
+<button class="bg-transparent border border-outline-variant hover:bg-white/5 text-on-surface py-3 px-6 rounded-lg font-label-lg text-label-lg transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined">upload_file</span>
+                        Load Sample (35 readings)
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>
