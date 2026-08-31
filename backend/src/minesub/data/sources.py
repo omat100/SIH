@@ -10,6 +10,12 @@ unrecognised, and ``data.allow_synthetic_fallback`` is true, a labelled
 surrogate with the identical schema is produced so the pipeline still runs
 end to end. Every row carries a ``data_source`` column so this is never hidden.
 """
+
+### purely not my work
+# get_logger() - Returns a configured logger that prints formatted messages to the console.
+# set_seed() - Returns nothing; sets random seeds for Python, NumPy, and PyTorch for reproducible results.
+# haversine_m() - Returns the great-circle distance between two latitude/longitude coordinates in metres.
+# pick_torch_device() - Returns the best available PyTorch device: "cuda", "mps", or "cpu".
 from __future__ import annotations
 
 import io
