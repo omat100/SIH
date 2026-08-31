@@ -27,6 +27,8 @@ class Config:
 
     def resolve(self, *parts: str) -> Path:
         """Resolve a repo-relative path from the ``paths`` block."""
+        # config.resolve("data", "raw", "dataset.csv")
+        # would become data/raw/dataset.csv
         p = Path(*parts)
         return p if p.is_absolute() else REPO_ROOT / p
 
