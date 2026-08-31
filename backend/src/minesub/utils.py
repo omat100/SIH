@@ -7,10 +7,11 @@ import random
 
 # Cap OpenMP threads before numpy / lightgbm / torch pull in their runtimes —
 # avoids an intermittent libomp race in LightGBM's Dataset build on macOS/arm.
+# OpenMP is used by many numerical libraries to run computations using multiple CPU threads.
 os.environ.setdefault("OMP_NUM_THREADS", "4")
 
 import numpy as np
-
+# 20:45:10  INFO     minesub.training  Model training started
 _LOG_FORMAT = "%(asctime)s  %(levelname)-7s  %(name)s  %(message)s"
 
 
@@ -27,6 +28,7 @@ def get_logger(name: str) -> logging.Logger:
 
 def set_seed(seed: int) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
+    # 42 vaala example lele
     random.seed(seed)
     np.random.seed(seed)
     try:
@@ -51,7 +53,7 @@ def haversine_m(lat1, lon1, lat2, lon2):
 
 def pick_torch_device() -> str:
     import torch
-
+    # just checked here cause my machine has mps and most windows machines have cuda
     if torch.cuda.is_available():
         return "cuda"
     if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
