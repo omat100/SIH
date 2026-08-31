@@ -72,7 +72,8 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _slim(m: dict) -> dict:
-    keys = ("accuracy", "macro_f1", "recall_critical", "precision_critical", "pr_auc_ovr")
+    keys = ("accuracy", "macro_f1", "recall_critical", "precision_critical", "pr_auc_ovr",
+            "mae", "r2", "spearman_rho", "hazard_pr_auc", "chosen_operating_point")
     return {k: m[k] for k in keys if k in m}
 
 
@@ -80,24 +81,32 @@ def _evaluate_saved(cfg, model_name: str) -> None:
     import pandas as pd
 
     from .datasplit import temporal_split
-    from .evaluate import evaluate_predictions
+    from .evaluate import evaluate_predictions, evaluate_regression
     from .features import build_sequences, feature_columns
 
     proc = cfg.paths["processed"]
+    task = cfg["labels"].get("task", "classification")
     samples = pd.read_parquet(proc / "samples_labeled.parquet")
     _, _, te = temporal_split(cfg, samples)
-    y = samples["y"].to_numpy()
+    y = samples["y_reg" if task == "regression" else "y"].to_numpy()
 
     if model_name == "gbdt":
         from .models.gbdt_model import GbdtRiskModel
         m = GbdtRiskModel.load(cfg, cfg.paths["models"] / "gbdt.joblib")
-        proba = m.predict_proba(samples[feature_columns(samples)].to_numpy(dtype=float)[te])
+        X = samples[feature_columns(samples)].to_numpy(dtype=float)[te]
+        pred = m.predict(X) if task == "regression" else m.predict_proba(X)
     else:
         from .models.torch_model import LSTMRiskModel
         ts = pd.read_parquet(proc / "timeseries.parquet")
         m = LSTMRiskModel.load(cfg, cfg.paths["models"] / "lstm.pt")
-        proba = m.predict_proba(build_sequences(cfg, samples, ts)[te])
-    evaluate_predictions(y[te], proba, cfg.paths["reports"], prefix=model_name)
+        seq = build_sequences(cfg, samples, ts)[te]
+        pred = m.predict(seq) if task == "regression" else m.predict_proba(seq)
+
+    if task == "regression":
+        evaluate_regression(y[te], pred, cfg.paths["reports"], prefix=model_name,
+                            cfg_eval=cfg.get("evaluate", {}))
+    else:
+        evaluate_predictions(y[te], pred, cfg.paths["reports"], prefix=model_name)
 
 
 def _demo(cfg) -> None:

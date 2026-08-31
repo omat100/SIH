@@ -48,7 +48,30 @@ def _accel_per_day2(y: np.ndarray) -> float:
     return float(2.0 * np.polyfit(x, y, 2)[0])
 
 
-def _backward_features(win: pd.DataFrame) -> dict[str, float]:
+def _kalman_features(d: np.ndarray, ti: np.ndarray,
+                     kf: dict | None) -> dict[str, float]:
+    """State-space (constant-acceleration) level/rate/accel for distance & tilt.
+    Cleaner than the polyfit slopes above; empty dict when disabled."""
+    if not kf or not kf.get("enabled", False):
+        return {}
+    from .kalman import kalman_rate
+    pv = float(kf.get("process_var", 1e-3))
+    kd = kalman_rate(d, dt=1.0, process_var=pv,
+                     meas_var=float(kf.get("meas_var_distance_mm2", 4.0)))
+    kt = kalman_rate(ti, dt=1.0, process_var=pv,
+                     meas_var=float(kf.get("meas_var_tilt_deg2", 1e-5)))
+    return {
+        "dist_kf_level": float(kd["level"][-1]),
+        "dist_kf_rate": float(kd["rate"][-1]),
+        "dist_kf_accel": float(kd["accel"][-1]),
+        "dist_kf_rate_std": float(np.nanstd(kd["rate"])),
+        "dist_kf_rate_delta": float(kd["rate"][-1] - kd["rate"][0]),
+        "tilt_kf_rate": float(kt["rate"][-1]),
+        "tilt_kf_accel": float(kt["accel"][-1]),
+    }
+
+
+def _backward_features(win: pd.DataFrame, kalman: dict | None = None) -> dict[str, float]:
     d = win["distance_mm"].to_numpy()
     ti = win["tilt_deg"].to_numpy()
     hu = win["humidity_pct"].to_numpy()
@@ -82,6 +105,7 @@ def _backward_features(win: pd.DataFrame) -> dict[str, float]:
         "rain_days": float(np.count_nonzero(rn > 1.0)),
         "doy_sin": np.sin(2 * np.pi * doy / 365.25),
         "doy_cos": np.cos(2 * np.pi * doy / 365.25),
+        **_kalman_features(d, ti, kalman),
     }
 
 
@@ -120,6 +144,7 @@ def build_feature_table(cfg: Config, ts: pd.DataFrame | None = None,
     H = int(fcfg["forward_horizon_days"])
     step = int(fcfg["step_days"])
     min_periods = int(fcfg["min_periods"])
+    kalman = fcfg.get("kalman")
 
     if ts is None:
         ts = pd.read_parquet(cfg.paths["processed"] / "timeseries.parquet")
@@ -138,7 +163,7 @@ def build_feature_table(cfg: Config, ts: pd.DataFrame | None = None,
             fwd = g.iloc[pos + 1: pos + 1 + H]
             if len(back) < min_periods or len(fwd) < max(3, H // 2):
                 continue
-            feat = _backward_features(back.reset_index())
+            feat = _backward_features(back.reset_index(), kalman=kalman)
             tgt = _forward_targets(fwd.reset_index())
             rows.append({
                 "station_id": sid,
@@ -164,7 +189,7 @@ def build_feature_table(cfg: Config, ts: pd.DataFrame | None = None,
 
 def feature_columns(samples: pd.DataFrame) -> list[str]:
     drop = {"station_id", "t", "data_source_disp", "data_source_wx",
-            "risk_class", "hazard_score", "y", "lat", "lon"}
+            "risk_class", "hazard_score", "y", "y_reg", "lat", "lon"}
     return [c for c in samples.columns
             if c not in drop and not c.startswith("fwd_")]
 

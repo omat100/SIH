@@ -73,6 +73,16 @@ def add_risk_labels(cfg: Config, samples: pd.DataFrame, save: bool = True) -> pd
     s["risk_class"] = pd.Categorical(cls, categories=list(RISK_CLASSES), ordered=True)
     s["y"] = s["risk_class"].map(_CLASS_TO_INT).astype(int)
 
+    # Regression target: forward settlement rate IN EXCESS of the node's own
+    # trailing rate (mm/day) — the quantity an early-warning system actually
+    # cares about, with no arbitrary class boundary. 7d-smoothed forward window
+    # (see features._forward_targets) keeps it a sustained-deformation signal.
+    s["y_reg"] = s["fwd_settlement_excess"].astype(float)
+    if lcfg.get("task", "classification") == "regression":
+        q = s["y_reg"].quantile([0.5, 0.9, 0.99]).round(4).to_dict()
+        log.info("regression target y_reg (mm/day excess): median=%.4g  p90=%.4g  p99=%.4g",
+                 q[0.5], q[0.9], q[0.99])
+
     dist = s["risk_class"].value_counts().reindex(RISK_CLASSES)
     log.info("label method=%s  distribution: %s", method,
              {k: int(v) for k, v in dist.items()})
