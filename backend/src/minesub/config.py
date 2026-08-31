@@ -30,6 +30,7 @@ class Config:
         # config.resolve("data", "raw", "dataset.csv")
         # would become data/raw/dataset.csv
         p = Path(*parts)
+        # If the path is already absolute then it returns directly
         return p if p.is_absolute() else REPO_ROOT / p
 
     @property
