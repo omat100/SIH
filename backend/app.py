@@ -18,7 +18,7 @@ app = Flask(__name__)
 CORS(app)
 
 # --- ESP32 Serial Configuration ---
-SERIAL_PORT = os.getenv("SERIAL_PORT", "COM7")
+SERIAL_PORT = os.getenv("SERIAL_PORT", "COM8")
 BAUD_RATE = int(os.getenv("BAUD_RATE", "115200"))
 SERIAL_TIMEOUT = 1
 
