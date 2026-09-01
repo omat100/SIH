@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>System Logs - Subside Sentinel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-background": "#dae2fd",
+                      "primary-fixed": "#d8e2ff",
+                      "error": "#ffb4ab",
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "surface-variant": "#2d3449",
+                      "on-surface": "#dae2fd",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-secondary-fixed": "#002113",
+                      "tertiary-fixed": "#ffdadb",
+                      "inverse-on-surface": "#283044",
+                      "tertiary": "#ffb2b7",
+                      "on-tertiary-container": "#5b0017",
+                      "error-container": "#93000a",
+                      "background": "#0b1326",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "surface-tint": "#adc6ff",
+                      "secondary": "#4edea3",
+                      "surface-container-lowest": "#060e20",
+                      "surface-container-high": "#222a3d",
+                      "outline-variant": "#424754",
+                      "on-tertiary-fixed": "#40000d",
+                      "on-primary-fixed-variant": "#004395",
+                      "surface-container-highest": "#2d3449",
+                      "on-primary-fixed": "#001a42",
+                      "on-surface-variant": "#c2c6d6",
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-container-low": "#131b2e",
+                      "on-secondary": "#003824",
+                      "on-primary": "#002e6a",
+                      "outline": "#8c909f",
+                      "on-error-container": "#ffdad6",
+                      "primary": "#adc6ff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "surface-container": "#171f33",
+                      "surface-dim": "#0b1326",
+                      "on-error": "#690005",
+                      "secondary-container": "#00a572",
+                      "on-tertiary": "#67001b",
+                      "inverse-surface": "#dae2fd",
+                      "inverse-primary": "#005ac2",
+                      "on-primary-container": "#00285d",
+                      "on-secondary-container": "#00311f",
+                      "primary-container": "#4d8eff",
+                      "surface": "#0b1326",
+                      "primary-fixed-dim": "#adc6ff",
+                      "surface-bright": "#31394d",
+                      "tertiary-container": "#ff516a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "unit": "4px",
+                      "gutter": "24px",
+                      "container-padding": "32px",
+                      "section-margin": "48px",
+                      "card-gap": "16px"
+              },
+              "fontFamily": {
+                      "headline-lg": [
+                              "Geist"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "mono-data": [
+                              "Geist"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Geist"
+                      ],
+                      "display-lg": [
+                              "Geist"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-lg": [
+                              "Geist"
+                      ],
+                      "headline-sm": [
+                              "Geist"
+                      ],
+                      "headline-md": [
+                              "Geist"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "mono-data": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.04em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "letterSpacing": "0em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: theme('colors.surface-variant'); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: theme('colors.outline'); }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+      </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar -->
+<header class="bg-surface/80 dark:bg-surface/80 backdrop-blur-xl font-headline-sm text-headline-sm font-label-lg text-label-lg fixed top-0 w-full z-50 border-b border-white/10 shadow-2xl flex justify-between items-center px-gutter h-16 w-full">
+<div class="flex items-center gap-4">
+<div class="md:hidden cursor-pointer active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed hover:bg-white/5 transition-colors p-2 rounded-full" data-icon="menu">menu</span>
+</div>
+<div class="font-headline-md text-headline-md font-bold text-primary tracking-tight">
+                Subside Sentinel
+            </div>
+</div>
+<div class="flex items-center gap-2">
+<div class="hidden md:flex items-center gap-2 mr-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 duration-200 hover:bg-white/5 transition-colors p-2 rounded-full" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 duration-200 hover:bg-white/5 transition-colors p-2 rounded-full" data-icon="settings">settings</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 duration-200 hover:bg-white/5 transition-colors p-2 rounded-full" data-icon="help">help</span>
+</div>
+<button class="bg-error text-on-error font-label-lg text-label-lg px-4 py-2 rounded shadow-sm hover:bg-error/90 active:scale-95 transition-all hidden sm:block border-t border-white/20">
+                Emergency Shutdown
+            </button>
+<div class="h-8 w-8 rounded-full bg-surface-variant overflow-hidden ml-2 border border-white/10 cursor-pointer">
+<img alt="User profile" class="w-full h-full object-cover" data-alt="A macro shot of a glowing blue fiber optic sensor array set against a pitch black background, highlighting the themes of high-tech surveillance and precision monitoring. Deep shadows and high contrast, modern corporate style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJEpQvcdRUc8ffSSvUO1qdIBcQ3frPCm2USvZn4q3wOtW4fChvBtqTM-TO8VHMwHHjfg2ky5Y059iu-2BU3MXP7QrJYjnHzgNRjdrVyTgxlVX8anmwiBw531ViWLYN7z9OeRJrZIsx0dq-Zb0trVyZJ894mxeHPgcIzrwaSmtALxOzLNcHzSghRzOmxvLP8V6XknNWPvt3V2u8ZzwqjwiZAjD9xGaaLKY8jklvg4z9oJBL9QE3ioY7"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 pt-16 h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-surface-container dark:bg-surface-container text-secondary dark:text-secondary-fixed-dim font-label-lg text-label-lg fixed left-0 top-0 h-full w-[280px] z-40 border-r border-white/5 flat no shadows flex flex-col py-section-margin gap-unit transition-all duration-300 ease-in-out hidden md:flex pt-24">
+<div class="px-6 mb-6">
+<div class="flex items-center gap-3 mb-6">
+<div class="h-10 w-10 rounded-full bg-surface-variant overflow-hidden border border-white/10">
+<img alt="System Operator" class="w-full h-full object-cover" data-alt="Close up of a stylized metallic security badge with glowing neon green accents, resting on a brushed dark steel surface. Evokes a sense of authority and advanced technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuHXpEaAyQKdevrR8GmPH2ZO2xJpiMb3kjVlgR0w7Q9bPxQcbI6Pis4TzE5kKn60nmRxRkm0KG7IC3r7mRsZnNO8RqMWbOXQIAi71hTpT62u2oVZdFM7947HtfFy5f3bRytEbNuEvvc0EGCSi7xAPvZPfozjXmbf3gPsvotFbDfQDgTQpFONCwFNpNyx6fNYJA3EsaGHDckx56gmiRllD0DN8TXoEGg7xsq36Xa_3vdPw6aFS7Eph3"/>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-on-surface">Mining Ops</div>
+<div class="font-label-md text-label-md text-on-surface-variant">Sector 7G - Active Monitoring</div>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary font-label-lg text-label-lg py-2 rounded flex justify-center items-center gap-2 hover:bg-primary/90 transition-colors border-t border-white/20">
+<span class="material-symbols-outlined text-sm">add</span> New Analysis
+                </button>
+</div>
+<nav class="flex-1 px-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Overview
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+                    Real-time Feed
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+                    Analytics
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="settings_input_component">settings_input_component</span>
+                    Model Tuning
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary border-r-2 border-primary bg-primary/10 font-bold transition-all cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+                    System Logs
+                </a>
+</nav>
+<div class="px-4 mt-auto">
+<div class="h-px bg-white/5 my-4 mx-2"></div>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-all cursor-pointer" href="#">
+<span class="material-symbols-outlined" data-icon="contact_support">contact_support</span>
+                    Support
+                </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-[280px] p-container-padding overflow-y-auto bg-background flex flex-col gap-6">
+<header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">System Logs</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Real-time event stream, API diagnostics, and sensor connectivity status.</p>
+</div>
+<div class="flex items-center gap-3 w-full md:w-auto">
+<div class="relative flex-1 md:w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container border border-outline-variant rounded-md py-2 pl-9 pr-4 text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-on-surface-variant/50" placeholder="Search logs..." type="text"/>
+</div>
+<button class="bg-surface-container border border-outline-variant text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+</button>
+<button class="bg-surface-container border border-outline-variant text-on-surface p-2 rounded-md hover:bg-surface-variant transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+</header>
+<!-- Filters -->
+<div class="flex gap-2 flex-wrap">
+<button class="px-3 py-1.5 rounded-full border border-outline-variant bg-surface-container text-on-surface font-label-md text-label-md flex items-center gap-2 hover:bg-surface-variant transition-colors">
+<span>All Events</span>
+</button>
+<button class="px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary font-label-md text-label-md flex items-center gap-2 hover:bg-primary/20 transition-colors">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span>Info</span>
+</button>
+<button class="px-3 py-1.5 rounded-full border border-secondary/30 bg-secondary/10 text-secondary font-label-md text-label-md flex items-center gap-2 hover:bg-secondary/20 transition-colors">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span>Warning</span>
+</button>
+<button class="px-3 py-1.5 rounded-full border border-error/30 bg-error/10 text-error font-label-md text-label-md flex items-center gap-2 hover:bg-error/20 transition-colors">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span>Critical</span>
+</button>
+</div>
+<!-- Terminal Viewer -->
+<div class="glass-panel rounded-xl flex-1 min-h-[500px] flex flex-col overflow-hidden relative">
+<!-- Terminal Header -->
+<div class="h-12 border-b border-white/5 bg-surface/50 flex justify-between items-center px-4 shrink-0">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">terminal</span>
+<span class="font-mono-data text-mono-data text-on-surface-variant">live-stream.log</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="font-label-md text-label-md text-secondary">Live</span>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-sm">pause</span>
+</button>
+</div>
+</div>
+<!-- Log Lines -->
+<div class="p-4 font-mono-data text-mono-data text-on-surface-variant overflow-y-auto flex-1 space-y-1" id="log-container">
+<div class="flex gap-4 hover:bg-white/5 px-2 py-1 rounded transition-colors group">
+<span class="text-outline w-24 shrink-0 text-right">14:02:11.045</span>
+<span class="text-primary w-16 shrink-0">[INFO]</span>
+<span class="text-surface-tint">sys.monitor</span>
+<span class="flex-1 break-all">Heartbeat received from Sensor Node Alpha-7 (ID: a7-f92). Signal strength: 98%.</span>
+<button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface transition-opacity"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+</div>
+<div class="flex gap-4 hover:bg-white/5 px-2 py-1 rounded transition-colors group">
+<span class="text-outline w-24 shrink-0 text-right">14:02:15.892</span>
+<span class="text-secondary w-16 shrink-0">[WARN]</span>
+<span class="text-surface-tint">api.gateway</span>
+<span class="flex-1 break-all text-secondary/80">Rate limit approaching for endpoint /v2/telemetry/ingest. Current: 950 req/min. Limit: 1000 req/min.</span>
+<button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface transition-opacity"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+</div>
+<div class="flex gap-4 hover:bg-white/5 px-2 py-1 rounded transition-colors group bg-error/5 border border-error/20">
+<span class="text-outline w-24 shrink-0 text-right">14:02:16.101</span>
+<span class="text-error w-16 shrink-0 font-bold">[CRIT]</span>
+<span class="text-surface-tint">subsidence.model</span>
+<span class="flex-1 break-all text-error">Threshold breached! Sector 7G Z-axis displacement &gt; 5mm/hr. Triggering automated alert sequence.</span>
+<button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface transition-opacity"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+</div>
+<div class="flex gap-4 hover:bg-white/5 px-2 py-1 rounded transition-colors group">
+<span class="text-outline w-24 shrink-0 text-right">14:02:16.155</span>
+<span class="text-primary w-16 shrink-0">[INFO]</span>
+<span class="text-surface-tint">alert.dispatcher</span>
+<span class="flex-1 break-all">Dispatching SMS and Email alerts to on-call engineering team (Roster: Shift-B).</span>
+<button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface transition-opacity"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+</div>
+<div class="flex gap-4 hover:bg-white/5 px-2 py-1 rounded transition-colors group">
+<span class="text-outline w-24 shrink-0 text-right">14:02:18.442</span>
+<span class="text-primary w-16 shrink-0">[INFO]</span>
+<span class="text-surface-tint">sys.monitor</span>
+<span class="flex-1 break-all">Sensor Node Beta-2 (ID: b2-x11) calibration successful. Drift compensated by 0.02mm.</span>
+<button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface transition-opacity"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+</div>
+<div class="flex gap-4 hover:bg-white/5 px-2 py-1 rounded transition-colors group">
+<span class="text-outline w-24 shrink-0 text-right">14:02:22.001</span>
+<span class="text-primary w-16 shrink-0">[INFO]</span>
+<span class="text-surface-tint">db.sync</span>
+<span class="flex-1 break-all">Incremental backup completed. 452 new records written to cold storage.</span>
+<button class="opacity-0 group-hover:opacity-100 text-outline hover:text-on-surface transition-opacity"><span class="material-symbols-outlined text-sm">content_copy</span></button>
+</div>
+<!-- Simulating more logs -->
+<div class="opacity-50 pointer-events-none mt-4 text-center text-sm">
+                        --- end of buffer ---
+                    </div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

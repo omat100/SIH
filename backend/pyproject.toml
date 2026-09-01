@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minesub"
+version = "0.1.0"
+description = "Sensor-based mine-subsidence early-warning: CA DWR hybrid dataset + risk classifiers"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26,<2.2",
+    "pandas>=2.1",
+    "pyarrow>=15",
+    "scikit-learn>=1.4",
+    "torch>=2.2",
+    "requests>=2.31",
+    "meteostat>=1.6",
+    "PyYAML>=6.0",
+    "matplotlib>=3.8",
+    "tqdm>=4.66",
+    "joblib>=1.3",
+]
+
+[project.optional-dependencies]
+lightgbm = ["lightgbm>=4.3"]     # optional alt backend for the primary model
+
+[project.scripts]
+minesub = "minesub.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
