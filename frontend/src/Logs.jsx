@@ -1,81 +1,64 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLiveData } from "./useLiveData";
 
 const LOG_LEVELS = ["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"];
-const MOCK_LOGS = [
-  { level: "INFO", timestamp: "10:42:15.234", source: "serial", message: "ESP32 connected on COM7 @ 115200" },
-  { level: "INFO", timestamp: "10:42:10.112", source: "inference", message: "Auto-inference triggered (30 days buffered)" },
-  { level: "INFO", timestamp: "10:42:05.001", source: "gbdt", message: "Prediction: WATCH (p=0.62) | horizon: 21d" },
-  { level: "INFO", timestamp: "10:42:05.002", source: "torch", message: "Prediction: SAFE (p=0.46) | horizon: 21d" },
-  { level: "WARN", timestamp: "10:41:58.901", source: "sensor/SN-441-B", message: "Tilt anomaly detected: +0.045°" },
-  { level: "INFO", timestamp: "10:41:55.334", source: "serial", message: "Received reading from SN-441-B" },
-  { level: "DEBUG", timestamp: "10:41:50.123", source: "pipeline", message: "Daily buffer: 28 days, 847 readings" },
-  { level: "ERROR", timestamp: "10:40:12.445", source: "serial", message: "Connection lost, retrying in 5s..." },
-  { level: "INFO", timestamp: "10:40:17.001", source: "serial", message: "Reconnected successfully" },
-  { level: "CRITICAL", timestamp: "10:39:00.000", source: "alert", message: "Subsidence threshold exceeded at Sensor B2" },
-];
 
 export default function Logs() {
-  const [logs, setLogs] = useState(MOCK_LOGS);
+  const [logs, setLogs] = useState([]);
   const [filterLevel, setFilterLevel] = useState("ALL");
   const [search, setSearch] = useState("");
   const [autoScroll, setAutoScroll] = useState(true);
+  const {
+    connected,
+    latestReading,
+    readingsCount,
+    predictions,
+  } = useLiveData();
+  const prevReadingDate = useRef(null);
+  const prevPrediction = useRef(null);
 
-  // Pull real live status + model health and prepend as log events
+  // Append a real log entry whenever a new reading or prediction arrives, or
+  // when the connection state changes. Uses an interval so state changes are
+  // observed without triggering cascading renders from the effect body.
   useEffect(() => {
-    let active = true;
-    const prependReal = async () => {
-      try {
-        const [statusRes, healthRes] = await Promise.all([
-          fetch("/api/live/status"),
-          fetch("/api/manual/health"),
-        ]);
-        const status = await statusRes.json();
-        const health = await healthRes.json();
-        if (!active) return;
-        const realLogs = [];
-        realLogs.push({
-          level: status?.connected ? "INFO" : "ERROR",
-          timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
-          source: "serial",
-          message: status?.connected
-            ? `ESP32 connected (${status.buffered_days ?? 0}/30 days buffered)`
-            : `ESP32 disconnected: ${status?.last_error || "no connection"}`,
+    const tick = () => {
+      const time = new Date().toLocaleTimeString("en-US", { hour12: false });
+      const entries = [];
+
+      if (latestReading && latestReading.date !== prevReadingDate.current) {
+        prevReadingDate.current = latestReading.date;
+        entries.push({
+          level: "DEBUG",
+          timestamp: time,
+          source: "sensor",
+          message: `Reading: temp=${latestReading.temp_c?.toFixed?.(1)}C hum=${latestReading.humidity_pct?.toFixed?.(1)}% tilt=${latestReading.tilt_deg?.toFixed?.(4)}deg dist=${latestReading.distance_mm?.toFixed?.(1)}mm (${readingsCount ?? 0} total)`,
         });
-        if (health?.models) {
-          Object.entries(health.models).forEach(([name, st]) => {
-            realLogs.push({
-              level: st === "loaded" ? "INFO" : "WARN",
-              timestamp: new Date().toLocaleTimeString("en-US", { hour12: false }),
-              source: name,
-              message: `Model ${name === "torch" ? "LSTM" : name} ${st}`,
-            });
-          });
-        }
-        setLogs((prev) => [...realLogs, ...prev]);
-      } catch (e) {
-        console.error("Logs live fetch error:", e);
+      }
+
+      Object.entries(predictions || {}).forEach(([name, pred]) => {
+        if (!pred || pred.as_of === prevPrediction.current?.[name]) return;
+        prevPrediction.current = { ...(prevPrediction.current || {}), [name]: pred.as_of };
+        entries.push({
+          level:
+            pred.risk_class === "critical"
+              ? "CRITICAL"
+              : pred.risk_class === "watch"
+                ? "WARN"
+                : "INFO",
+          timestamp: time,
+          source: name,
+          message: `Prediction: ${pred.risk_class.toUpperCase()} (p=${(pred.probabilities?.[pred.risk_class] ?? 0).toFixed(2)}) | horizon: ${pred.horizon_days}d`,
+        });
+      });
+
+      if (entries.length > 0) {
+        setLogs((prev) => [...entries, ...prev].slice(0, 300));
       }
     };
-    prependReal();
-    return () => {
-      active = false;
-    };
-  }, []);
 
-  // Simulate live logs
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!autoScroll) return;
-      const newLog = {
-        level: LOG_LEVELS[Math.floor(Math.random() * LOG_LEVELS.length)],
-        timestamp: new Date().toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 3 }),
-        source: ["serial", "inference", "gbdt", "torch", "sensor/SN-892-A", "sensor/SN-441-B"][Math.floor(Math.random() * 6)],
-        message: "System heartbeat",
-      };
-      setLogs((prev) => [newLog, ...prev.slice(0, 999)]);
-    }, 3000);
+    const interval = setInterval(tick, 1500);
     return () => clearInterval(interval);
-  }, [autoScroll]);
+  }, [connected, latestReading, predictions, readingsCount]);
 
   const filteredLogs = logs.filter((log) => {
     if (filterLevel !== "ALL" && log.level !== filterLevel) return false;
@@ -159,16 +142,24 @@ export default function Logs() {
             <div className="col message">Message</div>
           </div>
           <div className="log-body">
-            {filteredLogs.map((log, i) => (
-              <div key={i} className={`log-row ${getLevelBg(log.level)}`}>
-                <div className="col time">{log.timestamp}</div>
-                <div className="col level">
-                  <span className={`level-badge ${getLevelStyle(log.level)}`}>{log.level}</span>
-                </div>
-                <div className="col source">{log.source}</div>
-                <div className="col message">{log.message}</div>
+            {filteredLogs.length === 0 ? (
+              <div className="empty-state">
+                <span className="material-symbols-outlined empty-icon">terminal</span>
+                <h3>No Data Fetched</h3>
+                <p>No system events yet — waiting for data from the backend sensor on COM8.</p>
               </div>
-            ))}
+            ) : (
+              filteredLogs.map((log, i) => (
+                <div key={i} className={`log-row ${getLevelBg(log.level)}`}>
+                  <div className="col time">{log.timestamp}</div>
+                  <div className="col level">
+                    <span className={`level-badge ${getLevelStyle(log.level)}`}>{log.level}</span>
+                  </div>
+                  <div className="col source">{log.source}</div>
+                  <div className="col message">{log.message}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -19,6 +19,7 @@ def cfg(tmp_path) -> Config:
     raw["data"]["synthetic_n_stations"] = 8
     raw["data"]["weather"]["provider"] = "none"          # seasonal fallback, no network
     raw["features"]["step_days"] = 10
+    raw["labels"]["task"] = "classification"             # default cfg is regression
     raw["model"]["torch"]["max_epochs"] = 2
     raw["model"]["torch"]["seq_len"] = 20
     raw["model"]["gbdt"]["max_iter"] = 60
@@ -60,3 +61,41 @@ def test_pipeline_train_predict(cfg):
     assert out["risk_class"] in {"safe", "watch", "critical"}
     # probabilities are rounded to 4 dp in the public payload
     assert abs(sum(out["probabilities"].values()) - 1.0) < 2e-3
+
+
+def test_regression_task(cfg):
+    """task: regression -> y_reg target, MAE/operating-point metrics, scalar predict."""
+    import copy
+
+    from minesub.config import Config
+    from minesub.pipeline import run_pipeline
+    from minesub.predict import predict
+    from minesub.train import train
+
+    raw = copy.deepcopy(cfg.raw)
+    raw["labels"]["task"] = "regression"
+    rc = Config(raw=raw, path=cfg.path)
+    rc.ensure_dirs()
+
+    labelled = run_pipeline(rc)
+    assert "y_reg" in labelled.columns
+
+    m = train(rc, "gbdt")
+    assert m["task"] == "regression"
+    assert "mae" in m and m["mae"] >= 0.0
+    assert "chosen_operating_point" in m
+
+    m_t = train(rc, "torch")
+    assert "mae" in m_t
+
+    import pandas as pd
+    ts = pd.read_parquet(rc.paths["processed"] / "timeseries.parquet")
+    one = ts[ts["station_id"] == ts["station_id"].iloc[0]].tail(40)
+    readings = [
+        {"date": r.date.isoformat(), "temp_c": r.temp_c, "humidity_pct": r.humidity_pct,
+         "tilt_deg": r.tilt_deg, "distance_mm": r.distance_mm}
+        for r in one.itertuples(index=False)
+    ]
+    out = predict(readings, model="gbdt", cfg=rc)
+    assert out["task"] == "regression"
+    assert "predicted_excess_rate_mm_day" in out

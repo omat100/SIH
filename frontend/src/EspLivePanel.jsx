@@ -1,34 +1,12 @@
-import { useEffect, useState } from "react";
-
-const POLL_INTERVAL = 3000;
+import { useState } from "react";
+import { useLiveData } from "./useLiveData";
 
 export default function EspLivePanel() {
-  const [status, setStatus] = useState(null);
-  const [latest, setLatest] = useState({ gbdt: null, torch: null });
+  const { connected, status, predictions, readingsCount, bufferedDays, hasAnyData } =
+    useLiveData();
   const [selectedModel, setSelectedModel] = useState("gbdt");
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [statusRes, latestRes] = await Promise.all([
-          fetch("/api/live/status"),
-          fetch("/api/live/latest"),
-        ]);
-        const statusData = await statusRes.json();
-        const latestData = await latestRes.json();
-        setStatus(statusData);
-        setLatest(latestData);
-      } catch (e) {
-        console.error("Live panel fetch error:", e);
-      }
-    };
-
-    fetchAll();
-    const interval = setInterval(fetchAll, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, []);
-
-  const prediction = latest[selectedModel];
+  const prediction = predictions[selectedModel] || null;
 
   const riskColor = (cls) => ({
     safe: "#22c55e",
@@ -50,8 +28,8 @@ export default function EspLivePanel() {
       <div className="live-header">
         <h2>Live ESP32 Monitoring</h2>
         <div className="live-status">
-          <span className={`status-dot ${status?.connected ? "connected" : "disconnected"}`} />
-          <span>{status?.connected ? "Connected" : "Disconnected"}</span>
+          <span className={`status-dot ${connected ? "connected" : "disconnected"}`} />
+          <span>{connected ? "Connected" : "Disconnected"}</span>
           {status?.last_error && (
             <span className="status-error" title={status.last_error}>
               ⚠ {status.last_error.substring(0, 50)}
@@ -63,11 +41,11 @@ export default function EspLivePanel() {
       <div className="live-meta">
         <div className="meta-item">
           <span className="meta-label">Buffered Days</span>
-          <span className="meta-value">{status?.buffered_days || 0} / 30</span>
+          <span className="meta-value">{bufferedDays || 0} / 30</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Total Readings</span>
-          <span className="meta-value">{status?.readings_count || 0}</span>
+          <span className="meta-value">{readingsCount || 0}</span>
         </div>
         <div className="meta-item">
           <span className="meta-label">Last Prediction</span>
@@ -82,7 +60,11 @@ export default function EspLivePanel() {
         </div>
       </div>
 
-      {prediction ? (
+      {!hasAnyData ? (
+        <div className="live-empty">
+          No data fetched — waiting for the AI result from the backend.
+        </div>
+      ) : prediction ? (
         <div className="live-prediction">
           <div className="risk-card" style={{ borderColor: riskColor(prediction.risk_class) }}>
             <div className="risk-class" style={{ background: riskColor(prediction.risk_class) }}>
@@ -138,9 +120,9 @@ export default function EspLivePanel() {
         </div>
       ) : (
         <div className="live-empty">
-          {status?.buffered_days >= 30
+          {bufferedDays >= 30
             ? "Waiting for inference..."
-            : `Collecting data... ${status?.buffered_days || 0}/30 days buffered`}
+            : `Collecting data... ${bufferedDays || 0}/30 days buffered`}
         </div>
       )}
 
@@ -148,8 +130,8 @@ export default function EspLivePanel() {
         <button onClick={() => fetch("/api/live/trigger", { method: "POST" })} className="btn-secondary">
           Trigger Inference Now
         </button>
-        <a href="/api/live/buffer" target="_blank" className="btn-secondary link-btn">
-          View Buffer Debug
+        <a href="/api/live/readings" target="_blank" className="btn-secondary link-btn">
+          View Raw Readings
         </a>
       </div>
     </section>

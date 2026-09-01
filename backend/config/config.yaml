@@ -45,8 +45,23 @@ features:
   forward_horizon_days: 21      # label describes deformation over [t, t+horizon]
   min_periods: 12               # min daily samples required inside a window
   step_days: 7                  # stride between consecutive windowed samples
+  kalman:
+    # Constant-acceleration Kalman smoother on distance_mm / tilt_deg -> clean
+    # level/rate/accel features (vs noisy polyfit slopes). Runs online, so it is
+    # deployable on a field node. See src/minesub/kalman.py.
+    enabled: true
+    process_var: 1.0e-3         # accel random-walk variance (bigger -> tracks faster)
+    meas_var_distance_mm2: 4.0  # distance measurement-noise variance
+    meas_var_tilt_deg2: 1.0e-5  # tilt measurement-noise variance
 
 labels:
+  # task: "classification" -> 3-class safe/watch/critical (see method below)
+  # task: "regression"     -> predict the forward settlement rate IN EXCESS of the
+  #        node's own trailing rate (mm/day). Sidesteps the arbitrary quantile
+  #        boundary; evaluated with MAE / R^2 + a recall-tuned operating point.
+  #        train / evaluate / predict all honour this; the shipped
+  #        artifacts/models/*.{joblib,pt} are regression models.
+  task: regression
   # method: "quantile" -> data-driven 3-class split of a composite hazard score
   #                       (guarantees a trainable problem on any input).
   # method: "absolute" -> fixed geotechnical thresholds (use this in the field).
@@ -57,6 +72,16 @@ labels:
     settlement_rate_mm_day: { watch: 2.0, critical: 10.0 }
     tilt_rate_deg_day:      { watch: 0.02, critical: 0.10 }
     settlement_accel_mm_day2_critical: 0.5
+
+evaluate:
+  # regression task: "high hazard" reference class = top `hazard_top_frac` of the
+  # true excess-rate distribution; we report precision/recall at each target and
+  # precision@top-k for each fraction, plus the threshold that first reaches
+  # recall >= operating_recall.
+  hazard_top_frac: 0.10
+  recall_targets: [0.5, 0.6, 0.7, 0.8]
+  topk_fracs: [0.05, 0.10, 0.20]
+  operating_recall: 0.60
 
 split:
   method: temporal             # earlier windows train, later windows test

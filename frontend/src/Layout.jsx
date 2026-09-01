@@ -42,18 +42,14 @@ export default function Layout() {
         </ul>
 
         <div className="sidenav-footer">
-          <NavLink to="/support" className="sidenav-link">
+          {/* <NavLink to="/support" className="sidenav-link">
             <span className="material-symbols-outlined">help</span>
             <span>Support</span>
-          </NavLink>
-          <NavLink to="/alerts" className="sidenav-link alert">
+          </NavLink> */}
+          {/* <NavLink to="" className="sidenav-link alert">
             <span className="material-symbols-outlined">warning</span>
             <span>Alert Status</span>
-          </NavLink>
-          <button className="sidenav-cta">
-            <span className="material-symbols-outlined">play_arrow</span>
-            Run Prediction
-          </button>
+          </NavLink> */}
         </div>
       </nav>
 

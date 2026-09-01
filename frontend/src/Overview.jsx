@@ -1,10 +1,12 @@
 import { useState } from "react";
 import ReadingForm from "./ReadingForm";
 import EspLivePanel from "./EspLivePanel";
+import { useLiveData } from "./useLiveData";
 
 export default function Overview() {
+  const { hasAnyData, readingsCount, bufferedDays, lastPrediction } = useLiveData();
   const [model, setModel] = useState("gbdt");
-  const [readingsCount, setReadingsCount] = useState(0);
+  const [readingsCountForm, setReadingsCountForm] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -31,23 +33,6 @@ export default function Overview() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadSample = () => {
-    const sample = [];
-    const baseDate = new Date("2024-01-01");
-    for (let i = 0; i < 35; i++) {
-      const d = new Date(baseDate);
-      d.setDate(d.getDate() + i);
-      sample.push({
-        date: d.toISOString().split("T")[0],
-        temp_c: 18 + Math.sin(i / 5) * 6 + (Math.random() - 0.5) * 2,
-        humidity_pct: 55 + Math.cos(i / 5) * 5 + (Math.random() - 0.5) * 5,
-        tilt_deg: 0.002 * i + 0.00002 * i * i + (Math.random() - 0.5) * 0.001,
-        distance_mm: 0.4 * i + 0.01 * i * i + (Math.random() - 0.5) * 0.5,
-      });
-    }
-    return sample;
   };
 
   const riskColor = (cls) => ({
@@ -90,7 +75,7 @@ export default function Overview() {
             <h4 className="section-title">Sensor Readings</h4>
             <div className="readings-badge">
               <span className="material-symbols-outlined">database</span>
-              Readings: {readingsCount} / 30
+              Readings: {readingsCountForm} / 30
             </div>
           </div>
 
@@ -98,26 +83,24 @@ export default function Overview() {
             model={model}
             loading={loading}
             onPredict={handlePredict}
-            onCountChange={setReadingsCount}
+            onCountChange={setReadingsCountForm}
           />
 
-          {/* Actions */}
-          <div className="form-actions">
-            <button
-              className="btn-primary"
-              onClick={() => {
-                const sample = loadSample();
-                // We'd need to pass this to ReadingForm - simplified for now
-                alert("Load Sample would populate 35 readings");
-              }}
-              disabled={loading}
-            >
-              <span className="material-symbols-outlined">upload_file</span>
-              Load Sample (35 readings)
-            </button>
-          </div>
+          {hasAnyData && (
+            <p className="hint">
+              Live backend buffer: {readingsCount} readings across {bufferedDays} days. Latest risk:{" "}
+              {lastPrediction ? lastPrediction.risk_class.toUpperCase() : "no AI result yet"}.
+            </p>
+          )}
         </div>
       </div>
+
+      {error && (
+        <div className="error-banner" role="alert">
+          <span className="material-symbols-outlined">error</span>
+          {error}
+        </div>
+      )}
 
       {/* Results Section */}
       {showResult && prediction && (

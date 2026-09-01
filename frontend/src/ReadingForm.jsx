@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 
 const REQUIRED_FIELDS = [
   { key: "date", label: "Date", type: "date" },
@@ -8,9 +8,15 @@ const REQUIRED_FIELDS = [
   { key: "distance_mm", label: "Distance (mm)", type: "number", step: 0.1, min: 0, max: 10000 },
 ];
 
-export default function ReadingForm({ onPredict, model, loading }) {
+export default function ReadingForm({ onPredict, loading, onCountChange }) {
   const [readings, setReadings] = useState([]);
   const [inputValues, setInputValues] = useState(() => getDefaults());
+
+  useEffect(() => {
+    if (typeof onCountChange === "function") {
+      onCountChange(readings.length);
+    }
+  }, [readings, onCountChange]);
 
   function getDefaults() {
     const today = new Date();
