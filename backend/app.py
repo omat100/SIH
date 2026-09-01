@@ -1,6 +1,8 @@
 # backend/app.py
 import os
 import json
+import math
+import re
 import threading
 import time
 from datetime import datetime
@@ -18,17 +20,28 @@ app = Flask(__name__)
 CORS(app)
 
 # --- ESP32 Serial Configuration ---
-SERIAL_PORT = os.getenv("SERIAL_PORT", "COM8")
+SERIAL_PORT = os.getenv("SERIAL_PORT", "COM7")
 BAUD_RATE = int(os.getenv("BAUD_RATE", "115200"))
 SERIAL_TIMEOUT = 1
+
+# Number of distinct buffered days required before inference runs. Defaults to 30
+# for real field behaviour; lower it via env (or ?min_days= on the trigger route)
+# to exercise the pipeline during testing without waiting a month.
+MIN_BUFFER_DAYS = int(os.getenv("MIN_BUFFER_DAYS", "30"))
 
 # --- Global State ---
 _cfg = load_config()
 _cfg.ensure_dirs()
-_models = {
-    "gbdt": GbdtRiskModel.load(_cfg, _cfg.paths["models"] / "gbdt.joblib"),
-    "torch": LSTMRiskModel.load(_cfg, _cfg.paths["models"] / "lstm.pt"),
+_MODEL_LOADERS = {
+    "gbdt": (GbdtRiskModel, "gbdt.joblib"),
+    "torch": (LSTMRiskModel, "lstm.pt"),
 }
+_models = {}
+for _name, (_cls, _fname) in _MODEL_LOADERS.items():
+    try:
+        _models[_name] = _cls.load(_cfg, _cfg.paths["models"] / _fname)
+    except Exception as _e:  # artifacts not built yet; health endpoint reports "missing"
+        print(f"Model not loaded ({_name}): {_e}")
 
 # Daily buffer: date_str -> list of readings for that day
 _daily_buffer = defaultdict(list)
@@ -77,15 +90,16 @@ def _run_inference(daily_readings):
             print(f"Inference error ({model_name}): {e}")
 
 
-def _check_and_run_inference():
-    """If >=30 daily readings, run inference for both models."""
+def _check_and_run_inference(min_days=None):
+    """If enough distinct days are buffered, run inference for both models."""
+    if min_days is None:
+        min_days = MIN_BUFFER_DAYS
     with _buffer_lock:
         sorted_dates = sorted(_daily_buffer.keys())
-        if len(sorted_dates) < 30:
-            _update_status(buffered_days=len(sorted_dates))
-            return
         _update_status(buffered_days=len(sorted_dates))
-        recent_dates = sorted_dates[-30:]
+        if len(sorted_dates) < min_days:
+            return
+        recent_dates = sorted_dates[-min_days:]
         daily_readings = []
         for d in recent_dates:
             agg = _aggregate_daily(_daily_buffer[d])
@@ -94,36 +108,134 @@ def _check_and_run_inference():
     _run_inference(daily_readings)
 
 
+# --- ASCII console-block parsing --------------------------------------------
+# The receiver prints human-readable packets like:
+#     ==== SENSOR DATA RECEIVED ====
+#     Temperature: 28.9 °C
+#     Humidity: 26.1 %
+#     Accel X: -0.08 g
+#     ...
+#     ==============================
+# We reassemble those packets and pull the numbers out of them.
+
+# "Label: <number><unit>" -> capture the label and only the leading number, so
+# trailing units (°C, %, g, °/s, cm) are ignored. Text-only values ("Status: OK")
+# and banner/separator lines do not match.
+_CV_FIELD_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9_ ]*?)\s*:\s*([-+]?\d*\.?\d+)")
+
+# Labels pulled from a single packet, matched case-insensitively.
+_CONSOLE_FIELDS = ("temperature", "humidity", "accel x", "accel y", "accel z", "distance")
+
+
+def _parse_cv_field(line):
+    """Parse one 'Label: value' console line -> (label, value_float) or None."""
+    m = _CV_FIELD_RE.match(line)
+    if not m:
+        return None
+    return m.group(1).strip(), float(m.group(2))
+
+
+def _extract_console_reading(block_lines):
+    """Build a sensor sample from one console packet's lines.
+
+    Returns ``{"temp_c", "humidity_pct", "tilt_deg", "distance_mm"}`` or ``None``
+    when a required field is missing (incomplete packet). No timestamp is added.
+    """
+    vals = {}
+    for line in block_lines:
+        parsed = _parse_cv_field(line)
+        if parsed is None:
+            continue
+        label, value = parsed
+        key = label.lower()
+        if key in _CONSOLE_FIELDS:
+            vals[key] = value
+
+    if any(k not in vals for k in _CONSOLE_FIELDS):
+        return None
+
+    ax, ay, az = vals["accel x"], vals["accel y"], vals["accel z"]
+    tilt_deg = math.degrees(math.atan2(math.sqrt(ax ** 2 + ay ** 2), az))
+    return {
+        "temp_c": vals["temperature"],
+        "humidity_pct": vals["humidity"],
+        "tilt_deg": tilt_deg,
+        "distance_mm": vals["distance"] * 10.0,  # console prints centimetres
+    }
+
+
+def _buffer_reading(sample):
+    """Append one dated sample to the daily buffer and maybe run inference.
+
+    ``sample`` must carry ``date`` (ISO string) plus the four sensor metrics.
+    """
+    dt = datetime.fromisoformat(sample["date"].replace('Z', '+00:00'))
+    date_str = dt.date().isoformat()
+
+    with _buffer_lock:
+        _daily_buffer[date_str].append({
+            "temp_c": float(sample["temp_c"]),
+            "humidity_pct": float(sample["humidity_pct"]),
+            "tilt_deg": float(sample["tilt_deg"]),
+            "distance_mm": float(sample["distance_mm"]),
+        })
+        total = sum(len(v) for v in _daily_buffer.values())
+    _update_status(readings_count=total)
+
+    _check_and_run_inference()
+
+
 def _parse_and_buffer(line):
-    """Parse JSON line, validate, buffer by date."""
+    """Legacy JSON path: parse one JSON line, validate, buffer by date.
+
+    Returns ``True`` if the line was a usable JSON reading, ``False`` otherwise
+    (so the caller can fall back to the ASCII console-block parser).
+    """
     try:
         reading = json.loads(line)
-        required = {"date", "temp_c", "humidity_pct", "tilt_deg", "distance_mm"}
-        if not all(k in reading for k in required):
-            return
+    except (json.JSONDecodeError, ValueError):
+        return False
 
-        dt = datetime.fromisoformat(reading["date"].replace('Z', '+00:00'))
-        date_str = dt.date().isoformat()
+    required = {"date", "temp_c", "humidity_pct", "tilt_deg", "distance_mm"}
+    if not isinstance(reading, dict) or not all(k in reading for k in required):
+        return False
 
-        with _buffer_lock:
-            _daily_buffer[date_str].append({
-                "temp_c": float(reading["temp_c"]),
-                "humidity_pct": float(reading["humidity_pct"]),
-                "tilt_deg": float(reading["tilt_deg"]),
-                "distance_mm": float(reading["distance_mm"]),
-            })
-            total = sum(len(v) for v in _daily_buffer.values())
-        _update_status(readings_count=total)
+    try:
+        _buffer_reading(reading)
+    except (ValueError, KeyError):
+        return False
+    return True
 
-        _check_and_run_inference()
 
-    except (json.JSONDecodeError, ValueError, KeyError):
-        pass  # Silently ignore malformed lines
+def _is_block_boundary(line):
+    """True for a banner/separator line that delimits one console packet."""
+    stripped = line.strip()
+    if len(stripped) >= 3 and set(stripped) == {"="}:
+        return True
+    return "SENSOR DATA RECEIVED" in stripped.upper()
+
+
+def _handle_console_line(line, block):
+    """Accumulate ``line`` into ``block``; on a boundary, flush a complete packet.
+
+    Returns the (possibly reset) block list. Complete packets are stamped with
+    the current UTC time and pushed into the daily buffer.
+    """
+    if _is_block_boundary(line):
+        if block:
+            sample = _extract_console_reading(block)
+            if sample is not None:
+                sample["date"] = datetime.utcnow().isoformat() + "Z"
+                _buffer_reading(sample)
+        return []
+    block.append(line)
+    return block
 
 
 def _serial_reader():
     """Continuous serial reading in background thread."""
     ser = None
+    block = []
     while True:
         try:
             if ser is None or not ser.is_open:
@@ -132,11 +244,15 @@ def _serial_reader():
                 print(f"Serial connected: {SERIAL_PORT} @ {BAUD_RATE}")
 
             if ser.in_waiting > 0:
-                line = ser.readline().decode('utf-8').strip()
+                line = ser.readline().decode('utf-8', errors='replace').strip()
                 if line:
-                    _parse_and_buffer(line)
+                    # Try the legacy JSON path first; fall back to accumulating
+                    # human-readable console packets.
+                    if not _parse_and_buffer(line):
+                        block = _handle_console_line(line, block)
 
         except Exception as e:
+            block = []
             _update_status(connected=False, last_error=str(e))
             if ser:
                 try:
@@ -248,12 +364,22 @@ def esp_buffer():
 
 @app.route('/api/live/trigger', methods=['POST'])
 def esp_trigger():
-    """Manually trigger inference on current buffer."""
+    """Manually trigger inference on current buffer.
+
+    Accepts ``?min_days=N`` to force inference on fewer days for testing;
+    defaults to ``MIN_BUFFER_DAYS``.
+    """
+    try:
+        min_days = int(request.args.get("min_days", MIN_BUFFER_DAYS))
+    except (TypeError, ValueError):
+        return jsonify({"error": "min_days must be an integer"}), 400
+    if min_days < 1:
+        return jsonify({"error": "min_days must be >= 1"}), 400
     with _buffer_lock:
         sorted_dates = sorted(_daily_buffer.keys())
-        if len(sorted_dates) < 30:
-            return jsonify({"error": f"Need 30 days, have {len(sorted_dates)}"}), 400
-        recent_dates = sorted_dates[-30:]
+        if len(sorted_dates) < min_days:
+            return jsonify({"error": f"Need {min_days} days, have {len(sorted_dates)}"}), 400
+        recent_dates = sorted_dates[-min_days:]
         daily_readings = []
         for d in recent_dates:
             agg = _aggregate_daily(_daily_buffer[d])
