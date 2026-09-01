@@ -2,13 +2,14 @@
 import os
 import json
 import math
+import queue
 import re
 import threading
 import time
 from datetime import datetime
 from collections import defaultdict
 
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, request, stream_with_context
 from flask_cors import CORS
 
 from src.minesub.config import load_config
@@ -51,6 +52,14 @@ _buffer_lock = threading.Lock()
 _latest_predictions = {"gbdt": None, "torch": None}
 _prediction_lock = threading.Lock()
 
+# Most recent single sensor sample (dict with date + the four metrics), for the
+# frontend's live tiles / charts.
+_latest_reading = None
+
+# SSE fan-out: one bounded Queue per connected /api/live/stream client.
+_subscribers = set()
+_subscribers_lock = threading.Lock()
+
 # Serial connection status
 _serial_status = {
     "connected": False,
@@ -65,6 +74,26 @@ _status_lock = threading.Lock()
 def _update_status(**kwargs):
     with _status_lock:
         _serial_status.update(kwargs)
+
+
+def _status_snapshot():
+    """Current serial status plus the live buffered-day count."""
+    with _status_lock:
+        snap = dict(_serial_status)
+    with _buffer_lock:
+        snap["buffered_days"] = len(_daily_buffer)
+    return snap
+
+
+def _publish(event, data):
+    """Fan one SSE event out to every connected /api/live/stream client."""
+    with _subscribers_lock:
+        subs = list(_subscribers)
+    for q in subs:
+        try:
+            q.put_nowait((event, data))
+        except queue.Full:
+            pass  # slow client; drop this event for it
 
 
 def _aggregate_daily(readings):
@@ -106,6 +135,9 @@ def _check_and_run_inference(min_days=None):
             agg["date"] = d
             daily_readings.append(agg)
     _run_inference(daily_readings)
+    with _prediction_lock:
+        preds = dict(_latest_predictions)
+    _publish("prediction", preds)
 
 
 # --- ASCII console-block parsing --------------------------------------------
@@ -169,20 +201,29 @@ def _buffer_reading(sample):
 
     ``sample`` must carry ``date`` (ISO string) plus the four sensor metrics.
     """
+    global _latest_reading
+
     dt = datetime.fromisoformat(sample["date"].replace('Z', '+00:00'))
     date_str = dt.date().isoformat()
 
+    metrics = {
+        "temp_c": float(sample["temp_c"]),
+        "humidity_pct": float(sample["humidity_pct"]),
+        "tilt_deg": float(sample["tilt_deg"]),
+        "distance_mm": float(sample["distance_mm"]),
+    }
+
     with _buffer_lock:
-        _daily_buffer[date_str].append({
-            "temp_c": float(sample["temp_c"]),
-            "humidity_pct": float(sample["humidity_pct"]),
-            "tilt_deg": float(sample["tilt_deg"]),
-            "distance_mm": float(sample["distance_mm"]),
-        })
+        _daily_buffer[date_str].append(dict(metrics))
         total = sum(len(v) for v in _daily_buffer.values())
-    _update_status(readings_count=total)
+        buffered_days = len(_daily_buffer)
+        _latest_reading = {"date": sample["date"], **metrics}
+
+    _update_status(readings_count=total, buffered_days=buffered_days)
+    _publish("reading", {**_latest_reading, "readings_count": total})
 
     _check_and_run_inference()
+    _publish("status", _status_snapshot())
 
 
 def _parse_and_buffer(line):
@@ -362,6 +403,60 @@ def esp_buffer():
         })
 
 
+@app.route('/api/live/readings', methods=['GET'])
+def esp_readings():
+    """One-shot snapshot the frontend uses to hydrate: status, latest reading,
+    full per-day buffer, counts and predictions."""
+    with _buffer_lock:
+        buffer = {d: [dict(r) for r in v] for d, v in _daily_buffer.items()}
+    with _prediction_lock:
+        predictions = dict(_latest_predictions)
+    readings_count = sum(len(v) for v in buffer.values())
+    return jsonify({
+        "status": _status_snapshot(),
+        "latest_reading": _latest_reading,
+        "readings_count": readings_count,
+        "buffered_days": len(buffer),
+        "predictions": predictions,
+        "buffer": buffer,
+    })
+
+
+@app.route('/api/live/stream', methods=['GET'])
+def esp_stream():
+    """Server-Sent Events: 'reading', 'prediction' and 'status' events as they
+    happen. Clients connect with EventSource('/api/live/stream')."""
+    def gen():
+        q = queue.Queue(maxsize=200)
+        with _subscribers_lock:
+            _subscribers.add(q)
+        try:
+            # Prime the client with the current state.
+            yield f"event: status\ndata: {json.dumps(_status_snapshot())}\n\n"
+            with _prediction_lock:
+                preds = dict(_latest_predictions)
+            yield f"event: prediction\ndata: {json.dumps(preds)}\n\n"
+            while True:
+                try:
+                    event, data = q.get(timeout=15)
+                    yield f"event: {event}\ndata: {json.dumps(data)}\n\n"
+                except queue.Empty:
+                    yield ": keep-alive\n\n"
+        finally:
+            with _subscribers_lock:
+                _subscribers.discard(q)
+
+    return Response(
+        stream_with_context(gen()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
 @app.route('/api/live/trigger', methods=['POST'])
 def esp_trigger():
     """Manually trigger inference on current buffer.
@@ -387,7 +482,9 @@ def esp_trigger():
             daily_readings.append(agg)
     _run_inference(daily_readings)
     with _prediction_lock:
-        return jsonify(dict(_latest_predictions))
+        preds = dict(_latest_predictions)
+    _publish("prediction", preds)
+    return jsonify(preds)
 
 
 if __name__ == '__main__':
@@ -395,4 +492,4 @@ if __name__ == '__main__':
     serial_thread = threading.Thread(target=_serial_reader, daemon=True)
     serial_thread.start()
     print(f"Starting ESP32 serial reader on {SERIAL_PORT} @ {BAUD_RATE}")
-    app.run(port=5000, debug=True, use_reloader=False)
+    app.run(port=5000, debug=True, use_reloader=False, threaded=True)
